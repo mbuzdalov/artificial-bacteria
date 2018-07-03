@@ -44,7 +44,15 @@ object Main {
     }
 
     object View extends JPanel {
-      val image = new BufferedImage(viewScale * width, viewScale * height, BufferedImage.TYPE_INT_RGB)
+      final val pixelWidth = width * viewScale
+      final val pixelHeight = height * viewScale
+      final val pixels = Array.ofDim[Int](pixelWidth * pixelHeight)
+
+      private[this] val image = new BufferedImage(pixelWidth, pixelHeight, BufferedImage.TYPE_INT_ARGB)
+
+      def refill(): Unit = {
+        image.setRGB(0, 0, pixelWidth, pixelHeight, pixels, 0, pixelWidth)
+      }
 
       override def paintComponent(g: Graphics): Unit = {
         super.paintComponent(g)
@@ -75,12 +83,12 @@ object Main {
           val h = (field.getHealth(x, y) * 255 / maxHealth).toInt
           val e = (field.getEnergy(x, y) * 255 / maxEnergy).toInt
           val d = (field.getDebris(x, y) * 255 / maxDebris).toInt
-          val z = (h << 16) | (e << 8) | d
+          val z = (h << 16) | (e << 8) | d | 0xff000000
           var dx = 0
           while (dx < viewScale) {
             var dy = 0
             while (dy < viewScale) {
-              View.image.setRGB(viewScale * x + dx, viewScale * y + dy, z)
+              View.pixels(viewScale * x + dx + (viewScale * y + dy) * View.pixelWidth) = z
               dy += 1
             }
             dx += 1
@@ -89,6 +97,7 @@ object Main {
         }
         y += 1
       }
+      View.refill()
       View.repaint()
     }
 
