@@ -2,6 +2,8 @@ package alife
 
 import java.util.concurrent.ThreadLocalRandom
 
+import scala.collection.mutable
+
 /**
  * A class for a field where bacteria live.
  */
@@ -76,45 +78,67 @@ class Field(val width: Int, val height: Int) {
   }
 
   def simulationStep(constants: Constants): Map[String, Double] = {
-    var actionCount = Action.all.map(t => (t.toString, 0.0)).toMap
-    for (x <- 0 until width; y <- 0 until height; g = genome(x, y) if g != null) {
-      val da = new DataAccess(Array.ofDim(maxGenomeSize))
-      da.offset = 0
-      for (i <- g.indices) {
-        da.array(i) = g(i).apply(this, x, y, da)
-        da.offset += 1
-      }
-      action(x, y) = -1
-      for (i <- 0 until math.min(g.size, Action.all.size)) {
-        if (Action.all(i).canApply(this, x, y, constants) && (action(x, y) == -1 || da(i + 1) > da(action(x, y)))) {
-          action(x, y) = i
+    val actionCount = new mutable.HashMap[String, Double]
+    for (a <- Action.all) actionCount += a.toString -> 0.0
+    var x = 0
+    while (x < width) {
+      var y = 0
+      while (y < height) {
+        val g = genome(x, y)
+        if (g != null) {
+          val da = new DataAccess(Array.ofDim(maxGenomeSize))
+          da.offset = 0
+          var i = 0
+          while (i < g.size) {
+            da.array(i) = g(i).apply(this, x, y, da)
+            da.offset += 1
+            i += 1
+          }
+          action(x, y) = -1
+          i = 0
+          val iMax = math.min(g.size, Action.all.size)
+          while (i < iMax) {
+            if (Action.all(i).canApply(this, x, y, constants) && (action(x, y) == -1 || da(i + 1) > da(action(x, y)))) {
+              action(x, y) = i
+            }
+            i += 1
+          }
+          if (action(x, y) != -1) {
+            val theAction = Action.all(action(x, y))
+            theAction.apply(this, x, y, constants)
+            val key = theAction.toString
+            actionCount.update(key, actionCount(key) + 1)
+          }
         }
+        y += 1
       }
-      if (action(x, y) != -1) {
-        val theAction = Action.all(action(x, y))
-        theAction.apply(this, x, y, constants)
-        val key = theAction.toString
-        actionCount = actionCount.updated(key, actionCount(key) + 1)
-      }
+      x += 1
     }
 
     var sumHealths = 0.0
     var sumEnergies = 0.0
     maxGenomeSize = 0
-    for (x <- 0 until width; y <- 0 until height) {
-      energy(x, y) += debris(x, y) * constants.debrisToEnergy
-      debris(x, y) *= (1 - constants.debrisDegradation)
-      energy(x, y) += ThreadLocalRandom.current().nextDouble() * 2 * constants.synthesis
-      sumEnergies += energy(x, y)
-      if (genome(x, y) != null) {
-        setGenome(x, y, genome(x, y), direction(x, y), health(x, y) - constants.idleCost)
-        sumHealths += health(x, y)
+
+    x = 0
+    while (x < width) {
+      var y = 0
+      while (y < height) {
+        energy(x, y) += debris(x, y) * constants.debrisToEnergy
+        debris(x, y) *= (1 - constants.debrisDegradation)
+        energy(x, y) += ThreadLocalRandom.current().nextDouble() * 2 * constants.synthesis
+        sumEnergies += energy(x, y)
         if (genome(x, y) != null) {
-          maxGenomeSize = math.max(maxGenomeSize, genome(x, y).size)
+          setGenome(x, y, genome(x, y), direction(x, y), health(x, y) - constants.idleCost)
+          sumHealths += health(x, y)
+          if (genome(x, y) != null) {
+            maxGenomeSize = math.max(maxGenomeSize, genome(x, y).size)
+          }
         }
+        y += 1
       }
+      x += 1
     }
-    actionCount + ("AvgHealth" -> sumHealths / math.max(1, getNumberOfBacteria)) + ("TotalEnergy" -> sumEnergies)
+    actionCount.toMap + ("AvgHealth" -> sumHealths / math.max(1, getNumberOfBacteria)) + ("TotalEnergy" -> sumEnergies)
   }
 }
 

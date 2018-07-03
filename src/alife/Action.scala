@@ -15,7 +15,7 @@ sealed trait Action {
  * All the available actions.
  */
 object Action {
-  def all: Seq[Action] = Seq(Fork, RotateMinus, RotatePlus, Move, Eat)
+  final val all: Seq[Action] = Seq(Fork, RotateMinus, RotatePlus, Move, Eat)
 
   abstract class Rotate(rotation: Int) extends Action {
     override protected def requiredEnergy(field: Field, x: Int, y: Int, constants: Constants): Double = {
