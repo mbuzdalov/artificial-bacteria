@@ -80,10 +80,10 @@ class Field(val width: Int, val height: Int) {
   def simulationStep(constants: Constants): Map[String, Double] = {
     val actionCount = new mutable.HashMap[String, Double]
     for (a <- Action.all) actionCount += a.toString -> 0.0
-    var x = 0
-    while (x < width) {
-      var y = 0
-      while (y < height) {
+    var y = 0
+    while (y < height) {
+      var x = 0
+      while (x < width) {
         val g = genome(x, y)
         if (g != null) {
           val da = new DataAccess(Array.ofDim(maxGenomeSize))
@@ -110,19 +110,19 @@ class Field(val width: Int, val height: Int) {
             actionCount.update(key, actionCount(key) + 1)
           }
         }
-        y += 1
+        x += 1
       }
-      x += 1
+      y += 1
     }
 
     var sumHealths = 0.0
     var sumEnergies = 0.0
     maxGenomeSize = 0
 
-    x = 0
-    while (x < width) {
-      var y = 0
-      while (y < height) {
+    y = 0
+    while (y < height) {
+      var x = 0
+      while (x < width) {
         energy(x, y) += debris(x, y) * constants.debrisToEnergy
         debris(x, y) *= (1 - constants.debrisDegradation)
         energy(x, y) += ThreadLocalRandom.current().nextDouble() * 2 * constants.synthesis
@@ -134,9 +134,9 @@ class Field(val width: Int, val height: Int) {
             maxGenomeSize = math.max(maxGenomeSize, genome(x, y).size)
           }
         }
-        y += 1
+        x += 1
       }
-      x += 1
+      y += 1
     }
     actionCount.toMap + ("AvgHealth" -> sumHealths / math.max(1, getNumberOfBacteria)) + ("TotalEnergy" -> sumEnergies)
   }
@@ -160,9 +160,9 @@ object Field {
   }
 
   class Matrix[@specialized(Double, Int) T : scala.reflect.ClassTag](width: Int, height: Int) {
-    val data: Array[Array[T]] = Array.ofDim(width, height)
-    def apply(x: Int, y: Int): T = data(mod(x, width))(mod(y, height))
-    def update(x: Int, y: Int, value: T): Unit = data(mod(x, width))(mod(y, height)) = value
+    val data: Array[Array[T]] = Array.ofDim(height, width)
+    def apply(x: Int, y: Int): T = data(mod(y, height))(mod(x, width))
+    def update(x: Int, y: Int, value: T): Unit = data(mod(y, height))(mod(x, width)) = value
 
     @inline private def mod(i: Int, n: Int) = if (i >= 0 && i < n) i else (i % n + n) % n
   }

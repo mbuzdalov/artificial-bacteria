@@ -31,16 +31,16 @@ object Main {
     val genomeLength = 50
     val field = new Field(width, height)
 
-    var x = 0
-    while (x < width) {
-      var y = 0
-      while (y < height) {
+    var y = 0
+    while (y < height) {
+      var x = 0
+      while (x < width) {
         if (ThreadLocalRandom.current().nextInt(5) == 0) {
           field.setGenome(x, y, IndexedSeq.tabulate(genomeLength)(Instruction.random), ThreadLocalRandom.current().nextInt(4), initHealth)
         }
-        y += 1
+        x += 1
       }
-      x += 1
+      y += 1
     }
 
     object View extends JPanel {
@@ -57,21 +57,21 @@ object Main {
     var maxDebris = 100.0
 
     def fillImage(): Unit = {
-      var x = 0
-      while (x < width) {
-        var y = 0
-        while (y < height) {
+      var y = 0
+      while (y < height) {
+        var x = 0
+        while (x < width) {
           maxHealth = math.max(maxHealth, field.getHealth(x, y))
           maxEnergy = math.max(maxEnergy, field.getEnergy(x, y))
           maxDebris = math.max(maxDebris, field.getDebris(x, y))
-          y += 1
+          x += 1
         }
-        x += 1
+        y += 1
       }
-      x = 0
-      while (x < width) {
-        var y = 0
-        while (y < height) {
+      y = 0
+      while (y < height) {
+        var x = 0
+        while (x < width) {
           val h = (field.getHealth(x, y) * 255 / maxHealth).toInt
           val e = (field.getEnergy(x, y) * 255 / maxEnergy).toInt
           val d = (field.getDebris(x, y) * 255 / maxDebris).toInt
@@ -85,9 +85,9 @@ object Main {
             }
             dx += 1
           }
-          y += 1
+          x += 1
         }
-        x += 1
+        y += 1
       }
       View.repaint()
     }
