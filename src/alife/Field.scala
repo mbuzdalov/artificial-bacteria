@@ -1,5 +1,6 @@
 package alife
 
+import java.util.Arrays
 import java.util.concurrent.ThreadLocalRandom
 
 import scala.collection.mutable
@@ -55,8 +56,12 @@ class Field(val width: Int, val height: Int) {
 
   def rotate(x: Int, y: Int, value: Int): Unit = direction(x, y) = (direction(x, y) + value) & 3
 
+  private[this] trait IntIntDoubleFun {
+    def apply(a: Int, b: Int): Double
+  }
+
   @inline
-  private def atRelative(x: Int, y: Int, relativeLocation: Int, fun: (Int, Int) => Double) = {
+  private[this] def atRelative(x: Int, y: Int, relativeLocation: Int, fun: IntIntDoubleFun): Double = {
     val dirFW = direction(x, y)
     val dirLF = (dirFW + 1) & 3
     val scaleFW = Field.relativeLocationsFW(relativeLocation)
@@ -66,28 +71,27 @@ class Field(val width: Int, val height: Int) {
     fun(realX, realY)
   }
 
-  @inline
   final def getEnergyRelative(x: Int, y: Int, relativeLocation: Int): Double = atRelative(x, y, relativeLocation, getEnergy)
-  @inline
   final def getDebrisRelative(x: Int, y: Int, relativeLocation: Int): Double = atRelative(x, y, relativeLocation, getDebris)
-  @inline
   final def getHealthRelative(x: Int, y: Int, relativeLocation: Int): Double = atRelative(x, y, relativeLocation, getHealth)
-  @inline
   final def setGenomeRelative(x: Int, y: Int, relativeLocation: Int, g: Genome, d: Int, h: Double): Unit = {
     atRelative(x, y, relativeLocation, (i, j) => { setGenome(i, j, g, d, h); 0.0 })
   }
 
   def simulationStep(constants: Constants): Map[String, Double] = {
-    val actionCount = new mutable.HashMap[String, Double]
-    for (a <- Action.all) actionCount += a.toString -> 0.0
+    val actionCount = Array.ofDim[Int](Action.all.size)
+    var da = new DataAccess(Array.ofDim((maxGenomeSize + 5) * 2))
+
     var y = 0
     while (y < height) {
       var x = 0
       while (x < width) {
         val g = genome(x, y)
         if (g != null) {
-          val da = new DataAccess(Array.ofDim(maxGenomeSize))
-          da.offset = 0
+          if (da.array.length < maxGenomeSize) {
+            da = new DataAccess(Array.ofDim(maxGenomeSize * 2))
+          }
+          da.clear()
           var i = 0
           while (i < g.size) {
             da.array(i) = g(i).apply(this, x, y, da)
@@ -106,8 +110,7 @@ class Field(val width: Int, val height: Int) {
           if (action(x, y) != -1) {
             val theAction = Action.all(action(x, y))
             theAction.apply(this, x, y, constants)
-            val key = theAction.toString
-            actionCount.update(key, actionCount(key) + 1)
+            actionCount(action(x, y)) += 1
           }
         }
         x += 1
@@ -138,7 +141,8 @@ class Field(val width: Int, val height: Int) {
       }
       y += 1
     }
-    actionCount.toMap + ("AvgHealth" -> sumHealths / math.max(1, getNumberOfBacteria)) + ("TotalEnergy" -> sumEnergies)
+    val resultMap = actionCount.zipWithIndex.map(p => Action.all(p._2).toString -> p._1.toDouble).toMap
+    resultMap + ("AvgHealth" -> sumHealths / math.max(1, getNumberOfBacteria)) + ("TotalEnergy" -> sumEnergies)
   }
 }
 
@@ -156,6 +160,10 @@ object Field {
     def apply(index: Int): Double = {
       val idx = offset - index
       if (idx < 0 || index <= 0) 0.0 else array(idx)
+    }
+    def clear(): Unit = {
+      offset = 0
+      Arrays.fill(array, 0.0)
     }
   }
 
