@@ -19,7 +19,7 @@ object Main {
       forkCost = 0.1,           // what part of chromosome weight, as energy, is spend on forking
       debrisDegradation = 0.02, // what part of debris disappear
       debrisToEnergy = 0.0,     // what part of debris becomes accessible as energy again
-      synthesisInit = 0.2,      // the expected amount of new food to be generated on first generations
+      synthesisInit = 0.3,      // the expected amount of new food to be generated on first generations
       synthesisFinal = 0.02,    // the expected amount of new food to be generated on infinitely remote generations
       synthesisDecay = 0.001,   // how fast the amount of new food moves from first to infinitely remove generations
       idleCost = 0.1,           // the amount of energy to spend on just being alive
@@ -69,16 +69,18 @@ object Main {
 
     var maxHealth = 100.0
     var maxEnergy = 100.0
-    var maxDebris = 100.0
 
     def fillImage(): Unit = {
+      maxHealth *= 0.95
+      maxEnergy *= 0.95
+
       var y = 0
       while (y < height) {
         var x = 0
         while (x < width) {
           maxHealth = math.max(maxHealth, field.getHealth(x, y))
           maxEnergy = math.max(maxEnergy, field.getEnergy(x, y))
-          maxDebris = math.max(maxDebris, field.getDebris(x, y))
+          maxEnergy = math.max(maxEnergy, field.getDebris(x, y))
           x += 1
         }
         y += 1
@@ -89,7 +91,7 @@ object Main {
         while (x < width) {
           val h = (field.getHealth(x, y) * 255 / maxHealth).toInt
           val e = (field.getEnergy(x, y) * 255 / maxEnergy).toInt
-          val d = (field.getDebris(x, y) * 255 / maxDebris).toInt
+          val d = (field.getDebris(x, y) * 255 / maxEnergy).toInt
           val z = (h << 16) | (e << 8) | d | 0xff000000
           var dx = 0
           while (dx < viewScale) {
