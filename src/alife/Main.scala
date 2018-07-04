@@ -26,14 +26,14 @@ object Main {
       healthMultiple = 10,      // how much energy can a bacteria keep, relative to genome size
       spotPeriodX = 2,          // how many hot spots (in terms of food) in a row will eventually appear
       spotPeriodY = 1,          // how many how spots in a column will eventually appear
-      spotSpeedX = 0.0001,      // how many horizontal space per generation every hot spot will move
+      spotSpeedX = 0.000094,    // how many horizontal space per generation every hot spot will move
       spotSpeedY = 0.0002,      // how many vertical space per generation every hot spot will move
       spotDecay = 0.01          // how fast everything outside the spot will decay
     )
 
-    val width = 450
-    val height = 250
-    val viewScale = 4
+    val width = 957
+    val height = 520
+    val viewScale = 2
     val initHealth = 10
     val genomeLength = 50
     val field = new Field(width, height)

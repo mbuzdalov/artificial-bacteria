@@ -5,5 +5,5 @@ if [[ "$1" == "clean" ]]; then
 else
     mkdir -p classes
     scalac -sourcepath src -d classes src/alife/*
-    scala -cp classes alife.Main
+    scala -J-Xmx1G -cp classes alife.Main
 fi
