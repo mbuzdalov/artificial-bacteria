@@ -47,7 +47,7 @@ object Action {
       val d = field.getDirection(x, y)
       field.setGenomeRelative(x, y, Field.relativeLocationForward, g, d, h - e)
       field.setGenome(x, y, null, 0, 0)
-      field.setDebris(x, y, e / 2)
+      field.setDebris(x, y, field.getDebris(x, y) + e / 2)
     }
   }
 
