@@ -78,7 +78,7 @@ class Field(val width: Int, val height: Int) {
     atRelative(x, y, relativeLocation, (i, j) => { setGenome(i, j, g, d, h); 0.0 })
   }
 
-  def simulationStep(constants: Constants): Map[String, Double] = {
+  def simulationStep(constants: Constants, stepNumber: Int): Map[String, Double] = {
     val actionCount = Array.ofDim[Int](Action.all.size)
     var da = new DataAccess(Array.ofDim((maxGenomeSize + 5) * 2))
 
@@ -122,13 +122,21 @@ class Field(val width: Int, val height: Int) {
     var sumEnergies = 0.0
     maxGenomeSize = 0
 
+    val synthDecay = math.exp(-stepNumber * constants.synthesisDecay)
+    val synthesisBase = 2 * (synthDecay * constants.synthesisInit + (1 - synthDecay) * constants.synthesisFinal)
+
     y = 0
     while (y < height) {
       var x = 0
       while (x < width) {
+        val cosx = math.cos(x * math.Pi * constants.spotPeriodX / width + 2 * math.Pi * stepNumber * constants.spotSpeedX)
+        val siny = math.sin(y * math.Pi * constants.spotPeriodY / height + 2 * math.Pi * stepNumber * constants.spotSpeedY)
+        val decay = math.exp(-stepNumber * constants.spotDecay) // initially 1, then decreases to 0
+        val synthesis = synthesisBase * ((1 - decay) * cosx * cosx * siny * siny + decay)
+
         energy(x, y) += debris(x, y) * constants.debrisToEnergy
         debris(x, y) *= (1 - constants.debrisDegradation)
-        energy(x, y) += ThreadLocalRandom.current().nextDouble() * 2 * constants.synthesis
+        energy(x, y) += ThreadLocalRandom.current().nextDouble() * synthesis
         sumEnergies += energy(x, y)
         if (genome(x, y) != null) {
           setGenome(x, y, genome(x, y), direction(x, y), health(x, y) - constants.idleCost)
@@ -176,6 +184,8 @@ object Field {
   }
 
   case class Constants(rotationCost: Double, moveCost: Double, eatCost: Double, forkCost: Double,
-                       debrisDegradation: Double, debrisToEnergy: Double, synthesis: Double,
-                       idleCost: Double, healthMultiple: Double)
+                       debrisDegradation: Double, debrisToEnergy: Double,
+                       synthesisInit: Double, synthesisFinal: Double, synthesisDecay: Double,
+                       idleCost: Double, healthMultiple: Double,
+                       spotPeriodX: Double, spotSpeedX: Double, spotPeriodY: Double, spotSpeedY: Double, spotDecay: Double)
 }

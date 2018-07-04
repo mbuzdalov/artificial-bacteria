@@ -19,9 +19,16 @@ object Main {
       forkCost = 0.1,           // what part of chromosome weight, as energy, is spend on forking
       debrisDegradation = 0.02, // what part of debris disappear
       debrisToEnergy = 0.0,     // what part of debris becomes accessible as energy again
-      synthesis = 0.1,          // the expected amount of new food to be generated
+      synthesisInit = 0.2,      // the expected amount of new food to be generated on first generations
+      synthesisFinal = 0.02,    // the expected amount of new food to be generated on infinitely remote generations
+      synthesisDecay = 0.001,   // how fast the amount of new food moves from first to infinitely remove generations
       idleCost = 0.1,           // the amount of energy to spend on just being alive
-      healthMultiple = 10       // how much energy can a bacteria keep, relative to genome size
+      healthMultiple = 10,      // how much energy can a bacteria keep, relative to genome size
+      spotPeriodX = 2,          // how many hot spots (in terms of food) in a row will eventually appear
+      spotPeriodY = 1,          // how many how spots in a column will eventually appear
+      spotSpeedX = 0.001,       // how many horizontal space per generation every hot spot will move
+      spotSpeedY = 0.002,       // how many vertical space per generation every hot spot will move
+      spotDecay = 0.01          // how fast everything outside the spot will decay
     )
 
     val width = 450
@@ -113,7 +120,7 @@ object Main {
       println(s"  Current bacteria number: ${field.getNumberOfBacteria}")
       println(s"  Current max genome size: ${field.getMaxGenomeSize}")
       if (field.getNumberOfBacteria > 0) {
-        val actionsMade = field.simulationStep(constants)
+        val actionsMade = field.simulationStep(constants, generation)
         println(s"  Actions: $actionsMade")
         work(generation + 1)
       }
