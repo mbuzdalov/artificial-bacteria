@@ -1,13 +1,12 @@
 package alife
 
-import java.awt.event.{MouseAdapter, MouseEvent}
+import java.awt.event.{ActionEvent, MouseAdapter, MouseEvent}
 import java.awt.image.BufferedImage
 import java.awt._
 import java.io.FileReader
 import java.util.concurrent.{LinkedBlockingDeque, ThreadLocalRandom}
 import java.util.{Locale, Properties}
 import javax.swing._
-
 import scala.annotation.tailrec
 
 /**
@@ -218,6 +217,51 @@ object Main {
     if (enableGenomeDumping) rightPane.add(mouseDumpGenome)
     rightPane.add(mousePutMonster)
     rightPane.add(wellAlignedBox(textWidth, fontSize))
+
+    var lastMagentaLabel = 0
+
+    val magentaNone = new JToggleButton(new AbstractAction("Не выделять") {
+      override def actionPerformed(e: ActionEvent): Unit = view.setMagentaLabel(-2)
+    })
+    val magentaMonster = new JToggleButton(new AbstractAction("Монстры и их потомки") {
+      override def actionPerformed(e: ActionEvent): Unit = view.setMagentaLabel(-1)
+    })
+    val magentaLongestGenome = new JToggleButton(new AbstractAction("Найти самый длинный геном") {
+      override def actionPerformed(e: ActionEvent): Unit = {
+        lastMagentaLabel += 1
+        view.setMagentaLabel(lastMagentaLabel)
+        clickCommands.addLast((e, _) => e.findAndMarkLongestGenome(lastMagentaLabel))
+      }
+    })
+    val magentaMostProductive = new JToggleButton(new AbstractAction("Максимальное число детей") {
+      override def actionPerformed(e: ActionEvent): Unit = {
+        lastMagentaLabel += 1
+        view.setMagentaLabel(lastMagentaLabel)
+        clickCommands.addLast((e, _) => e.findAndMarkMostProductive(lastMagentaLabel))
+      }
+    })
+    val magentaFastest = new JToggleButton(new AbstractAction("Самая быстрая бактерия") {
+      override def actionPerformed(e: ActionEvent): Unit = {
+        lastMagentaLabel += 1
+        view.setMagentaLabel(lastMagentaLabel)
+        clickCommands.addLast((e, _) => e.findAndMarkFastest(lastMagentaLabel))
+      }
+    })
+
+    val magentaGroup = new ButtonGroup
+    magentaGroup.add(magentaNone)
+    magentaGroup.add(magentaMonster)
+    magentaGroup.add(magentaLongestGenome)
+    magentaGroup.add(magentaMostProductive)
+    magentaGroup.add(magentaFastest)
+    magentaMonster.setSelected(true)
+
+    rightPane.add(brush(fontSize, new JLabel("Выбор выделенного штамма:")))
+    rightPane.add(magentaNone)
+    rightPane.add(magentaMonster)
+    rightPane.add(magentaLongestGenome)
+    rightPane.add(magentaMostProductive)
+    rightPane.add(magentaFastest)
 
     view.addMouseListener(new MouseAdapter {
       override def mouseClicked(e: MouseEvent): Unit = {

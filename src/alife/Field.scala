@@ -201,6 +201,25 @@ class Field(val width: Int, val height: Int) {
       nMonsters = nMonsters
     )
   }
+
+  def findAndMarkLongestGenome(label: Int): Unit =
+    forEachIndividual((x, y, ind) => if (ind.genome.size == maxGenomeSize) individual(x, y) = ind.copy(label = label))
+
+  def findAndMarkMostProductive(label: Int): Unit = labelMaxIndividual(_.numberOfChildren, 0, label)
+  def findAndMarkFastest(label: Int): Unit = labelMaxIndividual(_.averageSpeed, 0.0, label)
+
+  private[this] def labelMaxIndividual[T: Ordering](fun: Individual => T, defVal: T, label: Int): Unit = {
+    var t = defVal
+    forEachIndividual((_, _, ind) => t = implicitly[Ordering[T]].max(t, fun(ind)))
+    forEachIndividual((x, y, ind) => if (implicitly[Ordering[T]].equiv(t, fun(ind))) individual(x, y) = ind.copy(label = label))
+  }
+
+  private[this] def forEachIndividual(fun: (Int, Int, Individual) => Unit): Unit = {
+    for (y <- 0 until height; x <- 0 until width) {
+      val ind = individual(x, y)
+      if (ind != null) fun(x, y, ind)
+    }
+  }
 }
 
 object Field {

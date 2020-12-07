@@ -16,6 +16,8 @@ class FieldVisualizer(field: Field, pixelScale: Int) extends JPanel {
 
   private def visualConversion(a: Double): Double = math.log1p(a * (math.E - 1))
 
+  def setMagentaLabel(newMagentaLabel: Int): Unit = magentaLabel = newMagentaLabel
+
   def translate(x: Int, y: Int): (Int, Int) = (x / pixelScale, y / pixelScale)
 
   def fetchField(): Unit = {
