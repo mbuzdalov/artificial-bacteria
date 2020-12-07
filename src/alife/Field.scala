@@ -51,6 +51,25 @@ class Field(val width: Int, val height: Int) {
     }
   }
 
+  def increaseEnergy(x: Int, y: Int, radius: Int, amount: Double): Unit = {
+    for (xi <- -radius to radius; yi <- -radius to radius) {
+      if (xi * xi + yi * yi <= radius * radius) {
+        val oldEnergy = getEnergy(x + xi, y + yi)
+        setEnergy(x + xi, y + yi, oldEnergy + (amount * 1.05 - oldEnergy) * 0.5)
+      }
+    }
+  }
+
+  def eraseEverything(x: Int, y: Int, radius: Int): Unit = {
+    for (xi <- -radius to radius; yi <- -radius to radius) {
+      if (xi * xi + yi * yi <= radius * radius) {
+        setEnergy(x + xi, y + yi, 0)
+        setDebris(x + xi, y + yi, 0)
+        setIndividual(x + xi, y + yi, null, 0, 0)
+      }
+    }
+  }
+
   def rotate(x: Int, y: Int, value: Int): Unit = direction(x, y) = (direction(x, y) + value) & 3
 
   private[this] trait IntIntDoubleFun {
@@ -120,6 +139,7 @@ class Field(val width: Int, val height: Int) {
     var maxHealth = 0.0
     var sumHealths = 0.0
     var sumEnergies = 0.0
+    var maxEnergy = 0.0
     maxGenomeSize = 0
 
     var maxLifeSpan = 0
@@ -143,6 +163,7 @@ class Field(val width: Int, val height: Int) {
         debris(x, y) *= (1 - constants.debrisDegradation)
         energy(x, y) += ThreadLocalRandom.current().nextDouble() * synthesis
         sumEnergies += energy(x, y)
+        maxEnergy = math.max(maxEnergy, energy(x, y))
         if (individual(x, y) != null) {
           setIndividual(x, y, individual(x, y), direction(x, y), health(x, y) - constants.idleCost)
           sumHealths += health(x, y)
@@ -167,6 +188,7 @@ class Field(val width: Int, val height: Int) {
       averageHealth = sumHealths / math.max(1, getNumberOfBacteria),
       maximalHealth = maxHealth,
       totalEnergy = sumEnergies,
+      maxEnergy = maxEnergy,
       nEats = actionCount(Action.all.indexOf(Action.Eat)),
       nForks = actionCount(Action.all.indexOf(Action.Fork)),
       nMoves = actionCount(Action.all.indexOf(Action.Move)),
@@ -209,7 +231,7 @@ object Field {
     @inline private def mod(i: Int, n: Int) = if (i >= 0 && i < n) i else (i % n + n) % n
   }
 
-  case class StepStatistics(averageHealth: Double, maximalHealth: Double, totalEnergy: Double,
+  case class StepStatistics(averageHealth: Double, maximalHealth: Double, totalEnergy: Double, maxEnergy: Double,
                             nEats: Int, nForks: Int, nMoves: Int, nClockwise: Int, nCounterClockwise: Int,
                             maxLife: Int, maxChildren: Int, maxTravelDistance: Int, maxSpeed: Double)
 
