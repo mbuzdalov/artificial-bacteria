@@ -20,6 +20,11 @@ class FieldVisualizer(field: Field, pixelScale: Int) extends JPanel {
 
   def translate(x: Int, y: Int): (Int, Int) = (x / pixelScale, y / pixelScale)
 
+  def resetState(): Unit = {
+    maxHealth = 0
+    maxEnergy = 0
+  }
+
   def fetchField(): Unit = {
     maxHealth *= 0.95
     maxEnergy *= 0.95

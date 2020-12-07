@@ -4,6 +4,7 @@ import java.awt.event.{ActionEvent, MouseAdapter, MouseEvent}
 import java.awt.image.BufferedImage
 import java.awt._
 import java.io.FileReader
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{LinkedBlockingDeque, ThreadLocalRandom}
 import java.util.{Locale, Properties}
 import javax.swing._
@@ -75,6 +76,28 @@ object Main {
 
   private def makeMonster(): Individual = Individual(Monsters.First, -1)
 
+  private def initializeFieldRandomly(field: Field, initialBacteriaProbability: Double,
+                                      initialGenomeLength: Int, initialHealth: Double): Unit = {
+    var y = 0
+    while (y < field.height) {
+      var x = 0
+      while (x < field.width) {
+        field.setDebris(x, y, 0)
+        field.setEnergy(x, y, 1e-9)
+        if (ThreadLocalRandom.current().nextDouble( ) < initialBacteriaProbability) {
+          field.setIndividual(x, y,
+            Individual(IndexedSeq.tabulate(initialGenomeLength)(Instruction.random), 0),
+            ThreadLocalRandom.current().nextInt(4),
+            initialHealth)
+        } else {
+          field.setIndividual(x, y, null, 0, 0)
+        }
+        x += 1
+      }
+      y += 1
+    }
+  }
+
   def main(args: Array[String]): Unit = {
     System.setProperty("awt.useSystemAAFontSettings", "on")
     System.setProperty("swing.aatext", "true")
@@ -115,21 +138,7 @@ object Main {
     val enableGenomeDumping = properties.getProperty("enableGenomeDumping").toBoolean
     val legendIsOnRight = properties.getProperty("legendIsOnRight").toBoolean
 
-    var y = 0
-    while (y < height) {
-      var x = 0
-      while (x < width) {
-        if (ThreadLocalRandom.current().nextDouble( ) < initialBacteriaProbability) {
-          field.setIndividual(x, y,
-            Individual(IndexedSeq.tabulate(initialGenomeLength)(Instruction.random), 0),
-            ThreadLocalRandom.current().nextInt(4),
-            initialHealth)
-        }
-        x += 1
-      }
-      y += 1
-    }
-
+    initializeFieldRandomly(field, initialBacteriaProbability, initialGenomeLength, initialHealth)
     val view = new FieldVisualizer(field, pixelScale)
     view.setBackground(Color.BLACK)
 
@@ -262,6 +271,22 @@ object Main {
     rightPane.add(magentaLongestGenome)
     rightPane.add(magentaMostProductive)
     rightPane.add(magentaFastest)
+    rightPane.add(Box.createVerticalGlue())
+
+    val restartButton = new JButton("НАЧАТЬ ЗАНОВО")
+    val restarted = new AtomicBoolean(false)
+    restartButton.setBackground(Color.RED.darker().darker())
+    restartButton.setForeground(Color.WHITE)
+    restartButton.setFont(restartButton.getFont.deriveFont(fontSize.toFloat * 2))
+    restartButton.setAlignmentX(Component.LEFT_ALIGNMENT)
+    restartButton.addActionListener(_ => {
+      lastMagentaLabel = 0
+      mouseDoNothing.setSelected(true)
+      magentaMonster.setSelected(true)
+      restarted.set(true)
+    })
+
+    rightPane.add(restartButton)
 
     view.addMouseListener(new MouseAdapter {
       override def mouseClicked(e: MouseEvent): Unit = {
@@ -286,7 +311,12 @@ object Main {
     window.setVisible(true)
 
     @tailrec
-    def work(generation: Int): Unit = if (window.isVisible) {
+    def work(generation0: Int): Unit = if (window.isVisible) {
+      val generation = if (restarted.getAndSet(false)) {
+        initializeFieldRandomly(field, initialBacteriaProbability, initialGenomeLength, initialHealth)
+        0
+      } else generation0
+
       view.fetchField()
       val nBacteria = field.getNumberOfBacteria
       val genomeSize = field.getMaxGenomeSize
