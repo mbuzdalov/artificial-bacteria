@@ -76,7 +76,7 @@ class Field(val width: Int, val height: Int) {
     atRelative(x, y, relativeLocation, (i, j) => { setGenome(i, j, g, d, h); 0.0 })
   }
 
-  def simulationStep(constants: Constants, stepNumber: Int): Map[String, Double] = {
+  def simulationStep(constants: Constants, stepNumber: Int): Field.StepStatistics = {
     val actionCount = Array.ofDim[Int](Action.all.size)
     var da = new DataAccess(Array.ofDim((maxGenomeSize + 5) * 2))
 
@@ -116,6 +116,7 @@ class Field(val width: Int, val height: Int) {
       y += 1
     }
 
+    var maxHealth = 0.0
     var sumHealths = 0.0
     var sumEnergies = 0.0
     maxGenomeSize = 0
@@ -139,6 +140,7 @@ class Field(val width: Int, val height: Int) {
         if (genome(x, y) != null) {
           setGenome(x, y, genome(x, y), direction(x, y), health(x, y) - constants.idleCost)
           sumHealths += health(x, y)
+          maxHealth = math.max(maxHealth, health(x, y))
           if (genome(x, y) != null) {
             maxGenomeSize = math.max(maxGenomeSize, genome(x, y).size)
           }
@@ -149,6 +151,17 @@ class Field(val width: Int, val height: Int) {
     }
     val resultMap = actionCount.zipWithIndex.map(p => Action.all(p._2).toString -> p._1.toDouble).toMap
     resultMap + ("AvgHealth" -> sumHealths / math.max(1, getNumberOfBacteria)) + ("TotalEnergy" -> sumEnergies)
+
+    Field.StepStatistics(
+      averageHealth = sumHealths / math.max(1, getNumberOfBacteria),
+      maximalHealth = maxHealth,
+      totalEnergy = sumEnergies,
+      nEats = actionCount(Action.all.indexOf(Action.Eat)),
+      nForks = actionCount(Action.all.indexOf(Action.Fork)),
+      nMoves = actionCount(Action.all.indexOf(Action.Move)),
+      nClockwise = actionCount(Action.all.indexOf(Action.RotateMinus)),
+      nCounterClockwise = actionCount(Action.all.indexOf(Action.RotatePlus))
+    )
   }
 }
 
@@ -180,6 +193,9 @@ object Field {
 
     @inline private def mod(i: Int, n: Int) = if (i >= 0 && i < n) i else (i % n + n) % n
   }
+
+  case class StepStatistics(averageHealth: Double, maximalHealth: Double, totalEnergy: Double,
+                            nEats: Int, nForks: Int, nMoves: Int, nClockwise: Int, nCounterClockwise: Int)
 
   case class Constants(rotationCost: Double, moveCost: Double, eatCost: Double, forkCost: Double,
                        debrisDegradation: Double, debrisToEnergy: Double,
