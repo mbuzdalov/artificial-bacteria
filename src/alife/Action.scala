@@ -24,7 +24,7 @@ object Action {
     override def apply(field: Field, x: Int, y: Int, constants: Constants): Unit = {
       assert(canApply(field, x, y, constants))
       val e = requiredEnergy(field, x, y, constants)
-      field.setGenome(x, y, field.getGenome(x, y), (field.getDirection(x, y) + rotation) & 3, field.getHealth(x, y) - e)
+      field.setIndividual(x, y, field.getIndividual(x, y), (field.getDirection(x, y) + rotation) & 3, field.getHealth(x, y) - e)
       field.setDebris(x, y, field.getDebris(x, y) + e / 2)
     }
   }
@@ -42,11 +42,11 @@ object Action {
     override def apply(field: Field, x: Int, y: Int, constants: Constants): Unit = {
       assert(canApply(field, x, y, constants))
       val e = requiredEnergy(field, x, y, constants)
-      val g = field.getGenome(x, y)
+      val g = field.getIndividual(x, y)
       val h = field.getHealth(x, y)
       val d = field.getDirection(x, y)
-      field.setGenomeRelative(x, y, Field.relativeLocationForward, g, d, h - e)
-      field.setGenome(x, y, null, 0, 0)
+      field.setIndividualRelative(x, y, Field.relativeLocationForward, g, d, h - e)
+      field.setIndividual(x, y, null, 0, 0)
       field.setDebris(x, y, field.getDebris(x, y) + e / 2)
     }
   }
@@ -58,7 +58,7 @@ object Action {
       val w = field.getWeight(x, y)
       val eatAmount = math.max(0, math.min(math.min(field.getEnergy(x, y), w), w * constants.healthMultiple - field.getEnergy(x, y)))
       field.setEnergy(x, y, field.getEnergy(x, y) - eatAmount)
-      field.setGenome(x, y, field.getGenome(x, y), field.getDirection(x, y), field.getHealth(x, y) + eatAmount * (1 - constants.eatCost))
+      field.setIndividual(x, y, field.getIndividual(x, y), field.getDirection(x, y), field.getHealth(x, y) + eatAmount * (1 - constants.eatCost))
     }
   }
 
@@ -73,14 +73,14 @@ object Action {
       assert(canApply(field, x, y, constants))
       assert(Move.canApply(field, x, y, constants))
       val e = requiredEnergy(field, x, y, constants)
-      val g = field.getGenome(x, y)
+      val g = field.getIndividual(x, y)
       val h = field.getHealth(x, y) - e
       val d = field.getDirection(x, y)
       if (h / 2 > 0) {
-        field.setGenome(x, y, Operators.mutate(g), d, h / 2)
+        field.setIndividual(x, y, Operators.mutate(g), d, h / 2)
         Move.apply(field, x, y, constants)
       }
-      field.setGenome(x, y, g, d, h / 2)
+      field.setIndividual(x, y, g, d, h / 2)
     }
   }
 }

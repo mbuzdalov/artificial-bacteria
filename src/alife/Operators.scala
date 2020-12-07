@@ -6,19 +6,20 @@ import java.util.concurrent.ThreadLocalRandom
  * Evolutionary operators.
  */
 object Operators {
-  def mutate(genome: Seq[Instruction]): Seq[Instruction] = {
+  def mutate(individual: Individual): Individual = {
     val rng = ThreadLocalRandom.current()
+    val genome = individual.genome
     rng.nextInt(3) match {
       case 0 =>
-        genome.zipWithIndex.map(t => if (rng.nextInt(genome.size) == 0) Instruction.random(t._2) else t._1)
+        individual.copy(genome = genome.zipWithIndex.map(t => if (rng.nextInt(genome.size) == 0) Instruction.random(t._2) else t._1))
       case 1 =>
         if (genome.nonEmpty) {
           val (h, t) = genome.splitAt(rng.nextInt(genome.size))
-          h ++ t.tail
-        } else genome
+          individual.copy(genome = h ++ t.tail)
+        } else individual
       case 2 =>
         val (h, t) = genome.splitAt(rng.nextInt(1 + genome.size))
-        (h :+ Instruction.random(h.size)) ++ t
+        individual.copy(genome = (h :+ Instruction.random(h.size)) ++ t)
       case _ => throw new AssertionError()
     }
   }

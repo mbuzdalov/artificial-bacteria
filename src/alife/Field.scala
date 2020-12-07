@@ -7,13 +7,12 @@ import java.util.concurrent.ThreadLocalRandom
  * A class for a field where bacteria live.
  */
 class Field(val width: Int, val height: Int) {
-  type Genome = Seq[Instruction]
   import alife.Field.{Constants, DataAccess}
 
   private val energy = new Field.Matrix[Double](width, height)
   private val debris = new Field.Matrix[Double](width, height)
   private val health = new Field.Matrix[Double](width, height)
-  private val genome = new Field.Matrix[Genome](width, height)
+  private val individual = new Field.Matrix[Individual](width, height)
   private val direction = new Field.Matrix[Int](width, height)
   private val action = new Field.Matrix[Int](width, height)
 
@@ -27,27 +26,27 @@ class Field(val width: Int, val height: Int) {
   def getDebris(x: Int, y: Int): Double = debris(x, y)
   def getHealth(x: Int, y: Int): Double = health(x, y)
   def getDirection(x: Int, y: Int): Int = direction(x, y)
-  def getGenome(x: Int, y: Int): Genome = genome(x, y)
+  def getIndividual(x: Int, y: Int): Individual = individual(x, y)
   def getWeight(x: Int, y: Int): Double = {
-    val g = getGenome(x, y)
-    if (g == null) 0 else g.size
+    val g = getIndividual(x, y)
+    if (g == null) 0 else g.genome.size
   }
 
   def setEnergy(x: Int, y: Int, value: Double): Unit = energy(x, y) = value
   def setDebris(x: Int, y: Int, value: Double): Unit = debris(x, y) = value
-  def setGenome(x: Int, y: Int, g: Genome, d: Int, h: Double): Unit = {
-    if (genome(x, y) != null) {
+  def setIndividual(x: Int, y: Int, g: Individual, d: Int, h: Double): Unit = {
+    if (individual(x, y) != null) {
       numberOfBacteria -= 1
     }
     if (h < 0 || g == null) {
-      genome(x, y) = null
+      individual(x, y) = null
       direction(x, y) = 0
       health(x, y) = 0
     } else {
-      genome(x, y) = g
+      individual(x, y) = g
       direction(x, y) = d
       numberOfBacteria += 1
-      maxGenomeSize = math.max(maxGenomeSize, g.size)
+      maxGenomeSize = math.max(maxGenomeSize, g.genome.size)
       health(x, y) = h
     }
   }
@@ -72,8 +71,8 @@ class Field(val width: Int, val height: Int) {
   final def getEnergyRelative(x: Int, y: Int, relativeLocation: Int): Double = atRelative(x, y, relativeLocation, getEnergy)
   final def getDebrisRelative(x: Int, y: Int, relativeLocation: Int): Double = atRelative(x, y, relativeLocation, getDebris)
   final def getHealthRelative(x: Int, y: Int, relativeLocation: Int): Double = atRelative(x, y, relativeLocation, getHealth)
-  final def setGenomeRelative(x: Int, y: Int, relativeLocation: Int, g: Genome, d: Int, h: Double): Unit = {
-    atRelative(x, y, relativeLocation, (i, j) => { setGenome(i, j, g, d, h); 0.0 })
+  final def setIndividualRelative(x: Int, y: Int, relativeLocation: Int, g: Individual, d: Int, h: Double): Unit = {
+    atRelative(x, y, relativeLocation, (i, j) => { setIndividual(i, j, g, d, h); 0.0 })
   }
 
   def simulationStep(constants: Constants, stepNumber: Int): Field.StepStatistics = {
@@ -84,8 +83,9 @@ class Field(val width: Int, val height: Int) {
     while (y < height) {
       var x = 0
       while (x < width) {
-        val g = genome(x, y)
-        if (g != null) {
+        val ind = individual(x, y)
+        if (ind != null) {
+          val g = ind.genome
           if (da.array.length < maxGenomeSize) {
             da = new DataAccess(Array.ofDim(maxGenomeSize * 2))
           }
@@ -128,21 +128,21 @@ class Field(val width: Int, val height: Int) {
     while (y < height) {
       var x = 0
       while (x < width) {
-        val cosx = math.cos(x * math.Pi * constants.spotPeriodX / width + 2 * math.Pi * stepNumber * constants.spotSpeedX)
-        val siny = math.sin(y * math.Pi * constants.spotPeriodY / height + 2 * math.Pi * stepNumber * constants.spotSpeedY)
+        val cosX = math.cos(x * math.Pi * constants.spotPeriodX / width + 2 * math.Pi * stepNumber * constants.spotSpeedX)
+        val sinY = math.sin(y * math.Pi * constants.spotPeriodY / height + 2 * math.Pi * stepNumber * constants.spotSpeedY)
         val decay = math.exp(-stepNumber * constants.spotDecay) // initially 1, then decreases to 0
-        val synthesis = synthesisBase * ((1 - decay) * cosx * cosx * siny * siny + decay)
+        val synthesis = synthesisBase * ((1 - decay) * cosX * cosX * sinY * sinY + decay)
 
         energy(x, y) += debris(x, y) * constants.debrisToEnergy
         debris(x, y) *= (1 - constants.debrisDegradation)
         energy(x, y) += ThreadLocalRandom.current().nextDouble() * synthesis
         sumEnergies += energy(x, y)
-        if (genome(x, y) != null) {
-          setGenome(x, y, genome(x, y), direction(x, y), health(x, y) - constants.idleCost)
+        if (individual(x, y) != null) {
+          setIndividual(x, y, individual(x, y), direction(x, y), health(x, y) - constants.idleCost)
           sumHealths += health(x, y)
           maxHealth = math.max(maxHealth, health(x, y))
-          if (genome(x, y) != null) {
-            maxGenomeSize = math.max(maxGenomeSize, genome(x, y).size)
+          if (individual(x, y) != null) {
+            maxGenomeSize = math.max(maxGenomeSize, individual(x, y).genome.size)
           }
         }
         x += 1

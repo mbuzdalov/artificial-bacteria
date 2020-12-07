@@ -81,7 +81,10 @@ object Main {
       var x = 0
       while (x < width) {
         if (ThreadLocalRandom.current().nextDouble( ) < initialBacteriaProbability) {
-          field.setGenome(x, y, IndexedSeq.tabulate(initialGenomeLength)(Instruction.random), ThreadLocalRandom.current().nextInt(4), initialHealth)
+          field.setIndividual(x, y,
+            Individual(IndexedSeq.tabulate(initialGenomeLength)(Instruction.random)),
+            ThreadLocalRandom.current().nextInt(4),
+            initialHealth)
         }
         x += 1
       }
