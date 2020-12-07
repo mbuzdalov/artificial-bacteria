@@ -1,13 +1,11 @@
 package alife
 
-import java.awt.{BorderLayout, Graphics}
+import java.awt.{BorderLayout, Frame, Graphics}
 import java.awt.image.BufferedImage
 import java.io.FileReader
 import java.util.concurrent.ThreadLocalRandom
 import java.util.Properties
-
 import javax.swing._
-
 import scala.annotation.tailrec
 
 /**
@@ -131,7 +129,8 @@ object Main {
     window.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE)
     window.setLayout(new BorderLayout())
     window.add(View, BorderLayout.CENTER)
-    window.pack()
+    window.setExtendedState(Frame.MAXIMIZED_BOTH)
+    window.setUndecorated(true)
     window.setVisible(true)
 
     @tailrec
