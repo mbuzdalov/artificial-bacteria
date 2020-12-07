@@ -82,7 +82,7 @@ object Main {
       while (x < width) {
         if (ThreadLocalRandom.current().nextDouble( ) < initialBacteriaProbability) {
           field.setIndividual(x, y,
-            Individual(IndexedSeq.tabulate(initialGenomeLength)(Instruction.random)),
+            Individual(IndexedSeq.tabulate(initialGenomeLength)(Instruction.random), 0),
             ThreadLocalRandom.current().nextInt(4),
             initialHealth)
         }
@@ -107,18 +107,30 @@ object Main {
 
     val statTime = new StatText(fontSize, "Время: ")
     val statNBacteria = new StatText(fontSize, "Живых бактерий: ")
-    val statGenome = new StatText(fontSize, "Максимальный геном: ")
     val statAverageHealth = new StatText(fontSize, "Среднее здоровье: ")
-    val statMaxHealth = new StatText(fontSize, "Максимальное здоровье: ")
     val statSumEnergy = new StatText(fontSize, "Количество еды: ")
 
     rightPane.add(brush(fontSize, new JLabel("Статистика:")))
     rightPane.add(statTime)
     rightPane.add(statNBacteria)
-    rightPane.add(statGenome)
     rightPane.add(statAverageHealth)
-    rightPane.add(statMaxHealth)
     rightPane.add(statSumEnergy)
+    rightPane.add(Box.createRigidArea(new Dimension(textWidth, fontSize)))
+
+    val statMaxLifeSpan = new StatText(fontSize, "Максимальный срок жизни: ")
+    val statMaxHealth = new StatText(fontSize, "Максимальное здоровье: ")
+    val statGenome = new StatText(fontSize, "Максимальный размер генома: ")
+    val statMaxChildren = new StatText(fontSize, "Максимальное число детей: ")
+    val statMaxDistance = new StatText(fontSize, "Самый длинный путь: ")
+    val statMaxSpeed = new StatText(fontSize, "Самая большая скорость: ")
+
+    rightPane.add(brush(fontSize, new JLabel("Самые-самые:")))
+    rightPane.add(statMaxHealth)
+    rightPane.add(statMaxLifeSpan)
+    rightPane.add(statGenome)
+    rightPane.add(statMaxChildren)
+    rightPane.add(statMaxDistance)
+    rightPane.add(statMaxSpeed)
     rightPane.add(Box.createRigidArea(new Dimension(textWidth, fontSize)))
 
     val actionsEat = new StatText(fontSize, "Питаться: ")
@@ -168,6 +180,10 @@ object Main {
           statAverageHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.averageHealth))
           statMaxHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.maximalHealth))
           statSumEnergy.setValue(String.format(Locale.US, "%.2f", actionStatistics.totalEnergy))
+          statMaxSpeed.setValue(String.format(Locale.US, "%.2f", actionStatistics.maxSpeed))
+          statMaxChildren.setValue(actionStatistics.maxChildren.toString)
+          statMaxDistance.setValue(actionStatistics.maxTravelDistance.toString)
+          statMaxLifeSpan.setValue(actionStatistics.maxLife.toString)
         })
         work(generation + 1)
       }

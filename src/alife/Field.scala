@@ -107,6 +107,7 @@ class Field(val width: Int, val height: Int) {
           }
           if (action(x, y) != -1) {
             val theAction = Action.all(action(x, y))
+            ind.recordAction(theAction)
             theAction.apply(this, x, y, constants)
             actionCount(action(x, y)) += 1
           }
@@ -120,6 +121,11 @@ class Field(val width: Int, val height: Int) {
     var sumHealths = 0.0
     var sumEnergies = 0.0
     maxGenomeSize = 0
+
+    var maxLifeSpan = 0
+    var maxChildren = 0
+    var maxDistance = 0
+    var maxSpeed = 0.0
 
     val synthDecay = math.exp(-stepNumber * constants.synthesisDecay)
     val synthesisBase = 2 * (synthDecay * constants.synthesisInit + (1 - synthDecay) * constants.synthesisFinal)
@@ -141,8 +147,13 @@ class Field(val width: Int, val height: Int) {
           setIndividual(x, y, individual(x, y), direction(x, y), health(x, y) - constants.idleCost)
           sumHealths += health(x, y)
           maxHealth = math.max(maxHealth, health(x, y))
-          if (individual(x, y) != null) {
-            maxGenomeSize = math.max(maxGenomeSize, individual(x, y).genome.size)
+          val ind = individual(x, y)
+          if (ind != null) {
+            maxGenomeSize = math.max(maxGenomeSize, ind.genome.size)
+            maxLifeSpan = math.max(maxLifeSpan, ind.lifeSpan)
+            maxChildren = math.max(maxChildren, ind.numberOfChildren)
+            maxDistance = math.max(maxDistance, ind.travelDistance)
+            maxSpeed = math.max(maxSpeed, ind.averageSpeed)
           }
         }
         x += 1
@@ -160,7 +171,11 @@ class Field(val width: Int, val height: Int) {
       nForks = actionCount(Action.all.indexOf(Action.Fork)),
       nMoves = actionCount(Action.all.indexOf(Action.Move)),
       nClockwise = actionCount(Action.all.indexOf(Action.RotateMinus)),
-      nCounterClockwise = actionCount(Action.all.indexOf(Action.RotatePlus))
+      nCounterClockwise = actionCount(Action.all.indexOf(Action.RotatePlus)),
+      maxLife = maxLifeSpan,
+      maxChildren = maxChildren,
+      maxTravelDistance = maxDistance,
+      maxSpeed = maxSpeed
     )
   }
 }
@@ -195,7 +210,8 @@ object Field {
   }
 
   case class StepStatistics(averageHealth: Double, maximalHealth: Double, totalEnergy: Double,
-                            nEats: Int, nForks: Int, nMoves: Int, nClockwise: Int, nCounterClockwise: Int)
+                            nEats: Int, nForks: Int, nMoves: Int, nClockwise: Int, nCounterClockwise: Int,
+                            maxLife: Int, maxChildren: Int, maxTravelDistance: Int, maxSpeed: Double)
 
   case class Constants(rotationCost: Double, moveCost: Double, eatCost: Double, forkCost: Double,
                        debrisDegradation: Double, debrisToEnergy: Double,
