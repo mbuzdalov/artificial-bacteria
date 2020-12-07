@@ -75,7 +75,7 @@ object Main {
 
   private def makeMonster(): Individual = Individual(Monsters.First, -1)
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     System.setProperty("awt.useSystemAAFontSettings", "on")
     System.setProperty("swing.aatext", "true")
     val properties = loadProperties(args)
