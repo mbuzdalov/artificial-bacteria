@@ -13,10 +13,10 @@ object Operators {
       case 0 =>
         individual.copy(genome = genome.zipWithIndex.map(t => if (rng.nextInt(genome.size) == 0) Instruction.random(t._2) else t._1))
       case 1 =>
-        if (genome.nonEmpty) {
+        individual.copy(genome = if (genome.nonEmpty) {
           val (h, t) = genome.splitAt(rng.nextInt(genome.size))
-          individual.copy(genome = h ++ t.tail)
-        } else individual
+          h ++ t.tail
+        } else genome)
       case 2 =>
         val (h, t) = genome.splitAt(rng.nextInt(1 + genome.size))
         individual.copy(genome = (h :+ Instruction.random(h.size)) ++ t)
