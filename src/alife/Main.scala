@@ -128,13 +128,14 @@ object Main {
     }
 
     val window = new JFrame("Bacteria")
+    window.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE)
     window.setLayout(new BorderLayout())
     window.add(View, BorderLayout.CENTER)
     window.pack()
     window.setVisible(true)
 
     @tailrec
-    def work(generation: Int): Unit = {
+    def work(generation: Int): Unit = if (window.isVisible) {
       fillImage()
       print(f"$generation: #bacteria: ${field.getNumberOfBacteria}%5d, max size: ${field.getMaxGenomeSize}%2d")
       if (field.getNumberOfBacteria > 0) {
