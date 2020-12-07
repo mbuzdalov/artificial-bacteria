@@ -19,11 +19,11 @@ object Instruction {
     override def apply(field: Field, x: Int, y: Int, data: DA): Double = value
   }
 
-  object MyWeight extends Instruction {
+  case object MyWeight extends Instruction {
     override def apply(field: Field, x: Int, y: Int, data: DA): Double = field.getWeight(x, y)
   }
 
-  object MyHealth extends Instruction {
+  case object MyHealth extends Instruction {
     override def apply(field: Field, x: Int, y: Int, data: DA): Double = field.getHealth(x, y)
   }
 

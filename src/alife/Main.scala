@@ -30,6 +30,13 @@ object Main {
     label
   }
 
+  private def wellAlignedBox(textWidth: Int, fontSize: Int): Component = {
+    val dim = new Dimension(textWidth, fontSize)
+    val rv = new Box.Filler(dim, dim, dim)
+    rv.setAlignmentX(Component.LEFT_ALIGNMENT)
+    rv
+  }
+
   private def makeMonotoneIcon(size: Int, color: Color): ImageIcon = {
     val image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
     val rgb = color.getRGB
@@ -43,6 +50,21 @@ object Main {
   }
 
   @tailrec
+  private def findAndDumpIndividual(field: Field, x: Int, y: Int, d: Int): Unit = {
+    if (d == 11) {
+      println("Поблизости никого нет")
+    } else {
+      (-d to d).view.flatMap(dx => Seq(
+        Option(field.getIndividual(x + dx, y + d - math.abs(dx))),
+        Option(field.getIndividual(x + dx, y - d + math.abs(dx))),
+      ).flatten).headOption match {
+        case Some(g) => println(g.genome)
+        case None => findAndDumpIndividual(field, x, y, d + 1)
+      }
+    }
+  }
+
+  @tailrec
   private def drainClickQueue(queue: LinkedBlockingDeque[(Field, Field.StepStatistics) => Unit],
                               field: Field, stats: Field.StepStatistics): Unit = {
     val next = queue.pollFirst()
@@ -51,6 +73,8 @@ object Main {
       drainClickQueue(queue, field, stats)
     }
   }
+
+  private def makeMonster(): Individual = Individual(Monsters.First, -1)
 
   def main(args: Array[String]) {
     System.setProperty("awt.useSystemAAFontSettings", "on")
@@ -89,6 +113,8 @@ object Main {
 
     val smallRadius = properties.getProperty("smallRadius").toInt
     val largeRadius = properties.getProperty("largeRadius").toInt
+    val enableGenomeDumping = properties.getProperty("enableGenomeDumping").toBoolean
+    val legendIsOnRight = properties.getProperty("legendIsOnRight").toBoolean
 
     var y = 0
     while (y < height) {
@@ -118,19 +144,21 @@ object Main {
     rightPane.add(brush(fontSize, new JLabel("Еда", makeMonotoneIcon(fontSize, Color.GREEN), SwingConstants.LEADING)))
     rightPane.add(brush(fontSize, new JLabel("Отходы и останки", makeMonotoneIcon(fontSize, Color.BLUE), SwingConstants.LEADING)))
     rightPane.add(brush(fontSize, new JLabel("Выделенный штамм", makeMonotoneIcon(fontSize, Color.MAGENTA), SwingConstants.LEADING)))
-    rightPane.add(Box.createRigidArea(new Dimension(textWidth, fontSize)))
+    rightPane.add(wellAlignedBox(textWidth, fontSize))
 
     val statTime = new StatText(fontSize, "Время: ")
     val statNBacteria = new StatText(fontSize, "Живых бактерий: ")
+    val statNMonsters = new StatText(fontSize, "Из них потомков монстров: ")
     val statAverageHealth = new StatText(fontSize, "Среднее здоровье: ")
     val statSumEnergy = new StatText(fontSize, "Количество еды: ")
 
     rightPane.add(brush(fontSize, new JLabel("Статистика:")))
     rightPane.add(statTime)
     rightPane.add(statNBacteria)
+    rightPane.add(statNMonsters)
     rightPane.add(statAverageHealth)
     rightPane.add(statSumEnergy)
-    rightPane.add(Box.createRigidArea(new Dimension(textWidth, fontSize)))
+    rightPane.add(wellAlignedBox(textWidth, fontSize))
 
     val statMaxLifeSpan = new StatText(fontSize, "Максимальный срок жизни: ")
     val statMaxHealth = new StatText(fontSize, "Максимальное здоровье: ")
@@ -146,7 +174,7 @@ object Main {
     rightPane.add(statMaxChildren)
     rightPane.add(statMaxDistance)
     rightPane.add(statMaxSpeed)
-    rightPane.add(Box.createRigidArea(new Dimension(textWidth, fontSize)))
+    rightPane.add(wellAlignedBox(textWidth, fontSize))
 
     val actionsEat = new StatText(fontSize, "Питаться: ")
     val actionsMove = new StatText(fontSize, "Двигаться: ")
@@ -160,13 +188,15 @@ object Main {
     rightPane.add(actionsFork)
     rightPane.add(actionsCW)
     rightPane.add(actionsCCW)
-    rightPane.add(Box.createRigidArea(new Dimension(textWidth, fontSize)))
+    rightPane.add(wellAlignedBox(textWidth, fontSize))
 
     val mouseDoNothing = new JToggleButton("Ничего не делать")
     val mouseSmallFood = new JToggleButton("Добавить еды (малый радиус)")
     val mouseLargeFood = new JToggleButton("Добавить еды (большой радиус")
     val mouseSmallDestroy = new JToggleButton("Все стереть (малый радиус)")
     val mouseLargeDestroy = new JToggleButton("Все стереть (большой радиус)")
+    val mouseDumpGenome = new JToggleButton("Вывести геном на консоль")
+    val mousePutMonster = new JToggleButton("Добавить монстра")
 
     val clickCommands = new LinkedBlockingDeque[(Field, Field.StepStatistics) => Unit]()
     val mouseClickGroup = new ButtonGroup
@@ -175,6 +205,8 @@ object Main {
     mouseClickGroup.add(mouseLargeFood)
     mouseClickGroup.add(mouseSmallDestroy)
     mouseClickGroup.add(mouseLargeDestroy)
+    mouseClickGroup.add(mouseDumpGenome)
+    mouseClickGroup.add(mousePutMonster)
     mouseDoNothing.setSelected(true)
 
     rightPane.add(brush(fontSize, new JLabel("Действие клика мыши:")))
@@ -183,6 +215,9 @@ object Main {
     rightPane.add(mouseLargeFood)
     rightPane.add(mouseSmallDestroy)
     rightPane.add(mouseLargeDestroy)
+    if (enableGenomeDumping) rightPane.add(mouseDumpGenome)
+    rightPane.add(mousePutMonster)
+    rightPane.add(wellAlignedBox(textWidth, fontSize))
 
     view.addMouseListener(new MouseAdapter {
       override def mouseClicked(e: MouseEvent): Unit = {
@@ -190,8 +225,10 @@ object Main {
 
         if (mouseSmallFood.isSelected) clickCommands.addLast((e, s) => e.increaseEnergy(x, y, smallRadius, s.maxEnergy))
         if (mouseLargeFood.isSelected) clickCommands.addLast((e, s) => e.increaseEnergy(x, y, largeRadius, s.maxEnergy))
-        if (mouseSmallDestroy.isSelected) clickCommands.addLast((e, s) => e.eraseEverything(x, y, smallRadius))
-        if (mouseLargeDestroy.isSelected) clickCommands.addLast((e, s) => e.eraseEverything(x, y, largeRadius))
+        if (mouseSmallDestroy.isSelected) clickCommands.addLast((e, _) => e.eraseEverything(x, y, smallRadius))
+        if (mouseLargeDestroy.isSelected) clickCommands.addLast((e, _) => e.eraseEverything(x, y, largeRadius))
+        if (mouseDumpGenome.isSelected) findAndDumpIndividual(field, x, y, 0)
+        if (mousePutMonster.isSelected) clickCommands.addLast((e, _) => e.setIndividual(x, y, makeMonster(), ThreadLocalRandom.current().nextInt(4), initialHealth))
       }
     })
 
@@ -199,7 +236,7 @@ object Main {
     window.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE)
     window.setLayout(new BorderLayout())
     window.add(view, BorderLayout.CENTER)
-    window.add(rightPane, BorderLayout.LINE_END)
+    window.add(rightPane, if (legendIsOnRight) BorderLayout.LINE_END else BorderLayout.LINE_START)
     window.setExtendedState(Frame.MAXIMIZED_BOTH)
     window.setUndecorated(true)
     window.setVisible(true)
@@ -226,6 +263,7 @@ object Main {
           actionsCW.setValue(actionStatistics.nClockwise.toString)
           actionsCCW.setValue(actionStatistics.nCounterClockwise.toString)
 
+          statNMonsters.setValue(actionStatistics.nMonsters.toString)
           statAverageHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.averageHealth))
           statMaxHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.maximalHealth))
           statSumEnergy.setValue(String.format(Locale.US, "%.2f", actionStatistics.totalEnergy))

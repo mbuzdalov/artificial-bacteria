@@ -141,6 +141,7 @@ class Field(val width: Int, val height: Int) {
     var sumEnergies = 0.0
     var maxEnergy = 0.0
     maxGenomeSize = 0
+    var nMonsters = 0
 
     var maxLifeSpan = 0
     var maxChildren = 0
@@ -170,6 +171,7 @@ class Field(val width: Int, val height: Int) {
           maxHealth = math.max(maxHealth, health(x, y))
           val ind = individual(x, y)
           if (ind != null) {
+            if (ind.label < 0) nMonsters += 1
             maxGenomeSize = math.max(maxGenomeSize, ind.genome.size)
             maxLifeSpan = math.max(maxLifeSpan, ind.lifeSpan)
             maxChildren = math.max(maxChildren, ind.numberOfChildren)
@@ -181,8 +183,6 @@ class Field(val width: Int, val height: Int) {
       }
       y += 1
     }
-    val resultMap = actionCount.zipWithIndex.map(p => Action.all(p._2).toString -> p._1.toDouble).toMap
-    resultMap + ("AvgHealth" -> sumHealths / math.max(1, getNumberOfBacteria)) + ("TotalEnergy" -> sumEnergies)
 
     Field.StepStatistics(
       averageHealth = sumHealths / math.max(1, getNumberOfBacteria),
@@ -197,7 +197,8 @@ class Field(val width: Int, val height: Int) {
       maxLife = maxLifeSpan,
       maxChildren = maxChildren,
       maxTravelDistance = maxDistance,
-      maxSpeed = maxSpeed
+      maxSpeed = maxSpeed,
+      nMonsters = nMonsters
     )
   }
 }
@@ -233,7 +234,7 @@ object Field {
 
   case class StepStatistics(averageHealth: Double, maximalHealth: Double, totalEnergy: Double, maxEnergy: Double,
                             nEats: Int, nForks: Int, nMoves: Int, nClockwise: Int, nCounterClockwise: Int,
-                            maxLife: Int, maxChildren: Int, maxTravelDistance: Int, maxSpeed: Double)
+                            maxLife: Int, maxChildren: Int, maxTravelDistance: Int, maxSpeed: Double, nMonsters: Int)
 
   case class Constants(rotationCost: Double, moveCost: Double, eatCost: Double, forkCost: Double,
                        debrisDegradation: Double, debrisToEnergy: Double,

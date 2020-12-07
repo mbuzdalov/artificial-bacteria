@@ -12,6 +12,7 @@ class FieldVisualizer(field: Field, pixelScale: Int) extends JPanel {
   private[this] var maxHealth = 0.0
   private[this] var maxEnergy = 0.0
   private[this] val image = new BufferedImage(widthInPixels, heightInPixels, BufferedImage.TYPE_INT_ARGB)
+  private[this] var magentaLabel = -1
 
   private def visualConversion(a: Double): Double = math.log1p(a * (math.E - 1))
 
@@ -39,10 +40,15 @@ class FieldVisualizer(field: Field, pixelScale: Int) extends JPanel {
     while (y < height) {
       var x = 0
       while (x < width) {
-        val h = (visualConversion(field.getHealth(x, y) / maxHealth) * 255).toInt
-        val e = (visualConversion(field.getEnergy(x, y) / maxEnergy) * 255).toInt
-        val d = (visualConversion(field.getDebris(x, y) / maxEnergy) * 255).toInt
-        val z = (h << 16) | (e << 8) | d | 0xff000000
+        val g = field.getIndividual(x, y)
+        val z = if (g != null && g.label == magentaLabel) {
+          0xffff00ff
+        } else {
+          val h = (visualConversion(field.getHealth(x, y) / maxHealth) * 255).toInt
+          val e = (visualConversion(field.getEnergy(x, y) / maxEnergy) * 255).toInt
+          val d = (visualConversion(field.getDebris(x, y) / maxEnergy) * 255).toInt
+          (h << 16) | (e << 8) | d | 0xff000000
+        }
         var dx = 0
         while (dx < pixelScale) {
           var dy = 0
