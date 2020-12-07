@@ -4,8 +4,9 @@ import java.awt.{BorderLayout, Graphics}
 import java.awt.image.BufferedImage
 import java.util.concurrent.ThreadLocalRandom
 import javax.swing._
-
 import alife.Field.Constants
+
+import scala.annotation.tailrec
 
 /**
  * A first attempt to run the bacteria system
@@ -116,6 +117,7 @@ object Main {
     window.pack()
     window.setVisible(true)
 
+    @tailrec
     def work(generation: Int): Unit = {
       fillImage()
       print(f"$generation: #bacteria: ${field.getNumberOfBacteria}%5d, max size: ${field.getMaxGenomeSize}%2d")

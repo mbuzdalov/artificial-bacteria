@@ -1,9 +1,7 @@
 package alife
 
-import java.util.Arrays
+import java.util.{Arrays => JArrays}
 import java.util.concurrent.ThreadLocalRandom
-
-import scala.collection.mutable
 
 /**
  * A class for a field where bacteria live.
@@ -171,7 +169,7 @@ object Field {
     }
     def clear(): Unit = {
       offset = 0
-      Arrays.fill(array, 0.0)
+      JArrays.fill(array, 0.0)
     }
   }
 
@@ -187,5 +185,6 @@ object Field {
                        debrisDegradation: Double, debrisToEnergy: Double,
                        synthesisInit: Double, synthesisFinal: Double, synthesisDecay: Double,
                        idleCost: Double, healthMultiple: Double,
-                       spotPeriodX: Double, spotSpeedX: Double, spotPeriodY: Double, spotSpeedY: Double, spotDecay: Double)
+                       spotPeriodX: Double, spotSpeedX: Double, spotPeriodY: Double, spotSpeedY: Double,
+                       spotDecay: Double)
 }

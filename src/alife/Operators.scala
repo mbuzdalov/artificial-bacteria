@@ -12,7 +12,7 @@ object Operators {
       case 0 =>
         genome.zipWithIndex.map(t => if (rng.nextInt(genome.size) == 0) Instruction.random(t._2) else t._1)
       case 1 =>
-        if (genome.size > 0) {
+        if (genome.nonEmpty) {
           val (h, t) = genome.splitAt(rng.nextInt(genome.size))
           h ++ t.tail
         } else genome
