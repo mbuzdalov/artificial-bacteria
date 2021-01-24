@@ -10,6 +10,8 @@ import java.util.{Locale, Properties}
 import javax.swing._
 import scala.annotation.tailrec
 
+import alife.sound.{DefaultSynthesizer, SoundWriterJob}
+
 /**
  * A first attempt to run the bacteria system
  */
@@ -122,6 +124,8 @@ object Main {
       spotDecay = properties.getProperty("spotDecay").toDouble
     )
 
+    val useSound = properties.getProperty("sound").toBoolean
+    val soundFrequency = properties.getProperty("soundFrequency").toInt
     val textWidth = properties.getProperty("textWidth").toInt
     val fontSize = properties.getProperty("fontSize").toInt
 
@@ -310,6 +314,12 @@ object Main {
     window.setUndecorated(true)
     window.setVisible(true)
 
+    if (useSound) {
+      val soundThread = new Thread(new SoundWriterJob(field, DefaultSynthesizer, soundFrequency), "Sound thread")
+      soundThread.setDaemon(true)
+      soundThread.start()
+    }
+
     @tailrec
     def work(generation0: Int): Unit = if (window.isVisible) {
       val generation = if (restarted.getAndSet(false)) {
@@ -327,27 +337,25 @@ object Main {
         statGenome.setValue(genomeSize.toString)
       })
 
-      if (field.getNumberOfBacteria > 0) {
-        val actionStatistics = field.simulationStep(constants, generation)
-        drainClickQueue(clickCommands, field, actionStatistics)
-        SwingUtilities.invokeLater(() => {
-          actionsEat.setValue(actionStatistics.nEats.toString)
-          actionsMove.setValue(actionStatistics.nMoves.toString)
-          actionsFork.setValue(actionStatistics.nForks.toString)
-          actionsCW.setValue(actionStatistics.nClockwise.toString)
-          actionsCCW.setValue(actionStatistics.nCounterClockwise.toString)
+      val actionStatistics = field.simulationStep(constants, generation)
+      drainClickQueue(clickCommands, field, actionStatistics)
+      SwingUtilities.invokeLater(() => {
+        actionsEat.setValue(actionStatistics.nEats.toString)
+        actionsMove.setValue(actionStatistics.nMoves.toString)
+        actionsFork.setValue(actionStatistics.nForks.toString)
+        actionsCW.setValue(actionStatistics.nClockwise.toString)
+        actionsCCW.setValue(actionStatistics.nCounterClockwise.toString)
 
-          statNMonsters.setValue(actionStatistics.nMonsters.toString)
-          statAverageHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.averageHealth))
-          statMaxHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.maximalHealth))
-          statSumEnergy.setValue(String.format(Locale.US, "%.2f", actionStatistics.totalEnergy))
-          statMaxSpeed.setValue(String.format(Locale.US, "%.2f", actionStatistics.maxSpeed))
-          statMaxChildren.setValue(actionStatistics.maxChildren.toString)
-          statMaxDistance.setValue(actionStatistics.maxTravelDistance.toString)
-          statMaxLifeSpan.setValue(actionStatistics.maxLife.toString)
-        })
-        work(generation + 1)
-      }
+        statNMonsters.setValue(actionStatistics.nMonsters.toString)
+        statAverageHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.averageHealth))
+        statMaxHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.maximalHealth))
+        statSumEnergy.setValue(String.format(Locale.US, "%.2f", actionStatistics.totalEnergy))
+        statMaxSpeed.setValue(String.format(Locale.US, "%.2f", actionStatistics.maxSpeed))
+        statMaxChildren.setValue(actionStatistics.maxChildren.toString)
+        statMaxDistance.setValue(actionStatistics.maxTravelDistance.toString)
+        statMaxLifeSpan.setValue(actionStatistics.maxLife.toString)
+      })
+      work(generation + 1)
     }
     work(0)
   }

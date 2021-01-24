@@ -15,6 +15,7 @@ class Field(val width: Int, val height: Int) {
   private val individual = new Field.Matrix[Individual](width, height)
   private val direction = new Field.Matrix[Int](width, height)
   private val action = new Field.Matrix[Int](width, height)
+  private val sumDistancesL, sumDistancesR = new Array[Int](height)
 
   private var maxGenomeSize = 0
   private var numberOfBacteria = 0
@@ -31,12 +32,18 @@ class Field(val width: Int, val height: Int) {
     val g = getIndividual(x, y)
     if (g == null) 0 else g.genome.size
   }
+  def getSumOfDistancesFromLeft(y: Int): Int = sumDistancesL(y)
+  def getSumOfDistancesFromRight(y: Int): Int = sumDistancesR(y)
 
   def setEnergy(x: Int, y: Int, value: Double): Unit = energy(x, y) = value
   def setDebris(x: Int, y: Int, value: Double): Unit = debris(x, y) = value
   def setIndividual(x: Int, y: Int, g: Individual, d: Int, h: Double): Unit = {
+    val xm = (width + x % width) % width
+    val ym = (height + y % height) % height
     if (individual(x, y) != null) {
       numberOfBacteria -= 1
+      sumDistancesL(ym) -= xm
+      sumDistancesR(ym) -= width - 1 - xm
     }
     if (h < 0 || g == null) {
       individual(x, y) = null
@@ -48,6 +55,8 @@ class Field(val width: Int, val height: Int) {
       numberOfBacteria += 1
       maxGenomeSize = math.max(maxGenomeSize, g.genome.size)
       health(x, y) = h
+      sumDistancesL(ym) += xm
+      sumDistancesR(ym) += width - 1 - xm
     }
   }
 
