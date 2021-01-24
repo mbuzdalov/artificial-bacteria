@@ -5,7 +5,7 @@ import alife.Field
 import javax.sound.sampled.{AudioFormat, AudioSystem}
 
 class SoundWriterJob(field: Field, synthesizer: SoundSynthesizer, frequency: Int) extends Runnable {
-  private val myAudioFormat = new AudioFormat(frequency, 16, 2, true, false)
+  private val myAudioFormat = new AudioFormat(frequency.toFloat, 16, 2, true, false)
   private val dataLine = AudioSystem.getSourceDataLine(myAudioFormat)
 
   override def run(): Unit = {
