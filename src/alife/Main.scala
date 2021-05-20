@@ -32,6 +32,11 @@ object Main {
     label
   }
 
+  private def brush(fontSize: Int, button: JToggleButton): JToggleButton = {
+    button.setFont(button.getFont.deriveFont(fontSize.toFloat))
+    button
+  }
+
   private def wellAlignedBox(textWidth: Int, fontSize: Int): Component = {
     val dim = new Dimension(textWidth, fontSize)
     val rv = new Box.Filler(dim, dim, dim)
@@ -202,13 +207,13 @@ object Main {
     rightPane.add(actionsCCW)
     rightPane.add(wellAlignedBox(textWidth, fontSize))
 
-    val mouseDoNothing = new JToggleButton("Ничего не делать")
-    val mouseSmallFood = new JToggleButton("Добавить еды (малый радиус)")
-    val mouseLargeFood = new JToggleButton("Добавить еды (большой радиус")
-    val mouseSmallDestroy = new JToggleButton("Все стереть (малый радиус)")
-    val mouseLargeDestroy = new JToggleButton("Все стереть (большой радиус)")
-    val mouseDumpGenome = new JToggleButton("Вывести геном на консоль")
-    val mousePutMonster = new JToggleButton("Добавить монстра")
+    val mouseDoNothing = brush(fontSize, new JToggleButton("Ничего не делать"))
+    val mouseSmallFood = brush(fontSize, new JToggleButton("Добавить еды (малый радиус)"))
+    val mouseLargeFood = brush(fontSize, new JToggleButton("Добавить еды (большой радиус"))
+    val mouseSmallDestroy = brush(fontSize, new JToggleButton("Все стереть (малый радиус)"))
+    val mouseLargeDestroy = brush(fontSize, new JToggleButton("Все стереть (большой радиус)"))
+    val mouseDumpGenome = brush(fontSize, new JToggleButton("Вывести геном на консоль"))
+    val mousePutMonster = brush(fontSize, new JToggleButton("Добавить монстра"))
 
     val clickCommands = new LinkedBlockingDeque[(Field, Field.StepStatistics) => Unit]()
     val mouseClickGroup = new ButtonGroup
@@ -233,33 +238,33 @@ object Main {
 
     var lastMagentaLabel = 0
 
-    val magentaNone = new JToggleButton(new AbstractAction("Не выделять") {
+    val magentaNone = brush(fontSize, new JToggleButton(new AbstractAction("Не выделять") {
       override def actionPerformed(e: ActionEvent): Unit = view.setMagentaLabel(-2)
-    })
-    val magentaMonster = new JToggleButton(new AbstractAction("Монстры и их потомки") {
+    }))
+    val magentaMonster = brush(fontSize, new JToggleButton(new AbstractAction("Монстры и их потомки") {
       override def actionPerformed(e: ActionEvent): Unit = view.setMagentaLabel(-1)
-    })
-    val magentaLongestGenome = new JToggleButton(new AbstractAction("Найти самый длинный геном") {
+    }))
+    val magentaLongestGenome = brush(fontSize, new JToggleButton(new AbstractAction("Найти самый длинный геном") {
       override def actionPerformed(e: ActionEvent): Unit = {
         lastMagentaLabel += 1
         view.setMagentaLabel(lastMagentaLabel)
         clickCommands.addLast((e, _) => e.findAndMarkLongestGenome(lastMagentaLabel))
       }
-    })
-    val magentaMostProductive = new JToggleButton(new AbstractAction("Максимальное число детей") {
+    }))
+    val magentaMostProductive = brush(fontSize, new JToggleButton(new AbstractAction("Максимальное число детей") {
       override def actionPerformed(e: ActionEvent): Unit = {
         lastMagentaLabel += 1
         view.setMagentaLabel(lastMagentaLabel)
         clickCommands.addLast((e, _) => e.findAndMarkMostProductive(lastMagentaLabel))
       }
-    })
-    val magentaFastest = new JToggleButton(new AbstractAction("Самая быстрая бактерия") {
+    }))
+    val magentaFastest = brush(fontSize, new JToggleButton(new AbstractAction("Самая быстрая бактерия") {
       override def actionPerformed(e: ActionEvent): Unit = {
         lastMagentaLabel += 1
         view.setMagentaLabel(lastMagentaLabel)
         clickCommands.addLast((e, _) => e.findAndMarkFastest(lastMagentaLabel))
       }
-    })
+    }))
 
     val magentaGroup = new ButtonGroup
     magentaGroup.add(magentaNone)
