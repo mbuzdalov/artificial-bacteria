@@ -145,6 +145,7 @@ object Main {
     val smallRadius = properties.getProperty("smallRadius").toInt
     val largeRadius = properties.getProperty("largeRadius").toInt
     val enableGenomeDumping = properties.getProperty("enableGenomeDumping").toBoolean
+    val enableLegend = properties.getProperty("enableLegend").toBoolean
     val legendIsOnRight = properties.getProperty("legendIsOnRight").toBoolean
 
     initializeFieldRandomly(field, initialBacteriaProbability, initialGenomeLength, initialHealth)
@@ -314,7 +315,9 @@ object Main {
     window.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE)
     window.setLayout(new BorderLayout())
     window.add(view, BorderLayout.CENTER)
-    window.add(rightPane, if (legendIsOnRight) BorderLayout.LINE_END else BorderLayout.LINE_START)
+    if (enableLegend) {
+      window.add(rightPane, if (legendIsOnRight) BorderLayout.LINE_END else BorderLayout.LINE_START)
+    }
     window.setExtendedState(Frame.MAXIMIZED_BOTH)
     window.setUndecorated(true)
     window.setVisible(true)
