@@ -1,4 +1,3 @@
-/lib/
 /.idea/
-/out/
-*.iml
+/target/
+/project/
