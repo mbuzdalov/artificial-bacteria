@@ -110,6 +110,8 @@ object Main {
     System.setProperty("swing.aatext", "true")
     val properties = loadProperties(args)
 
+    val msg = Messages(properties.getProperty("language"))
+
     val constants = Field.Constants(
       rotationCost = properties.getProperty("rotationCost").toDouble,
       moveCost = properties.getProperty("moveCost").toDouble,
@@ -157,20 +159,20 @@ object Main {
     rightPane.setBackground(Color.BLACK)
     rightPane.setBorder(BorderFactory.createLineBorder(Color.BLACK, 10))
 
-    rightPane.add(brush(fontSize, new JLabel("Легенда")))
-    rightPane.add(brush(fontSize, new JLabel("Бактерии", makeMonotoneIcon(fontSize, Color.RED), SwingConstants.LEADING)))
-    rightPane.add(brush(fontSize, new JLabel("Еда", makeMonotoneIcon(fontSize, Color.GREEN), SwingConstants.LEADING)))
-    rightPane.add(brush(fontSize, new JLabel("Отходы и останки", makeMonotoneIcon(fontSize, Color.BLUE), SwingConstants.LEADING)))
-    rightPane.add(brush(fontSize, new JLabel("Выделенный штамм", makeMonotoneIcon(fontSize, Color.MAGENTA), SwingConstants.LEADING)))
+    rightPane.add(brush(fontSize, new JLabel(msg.legend)))
+    rightPane.add(brush(fontSize, new JLabel(msg.legendForBacteria, makeMonotoneIcon(fontSize, Color.RED), SwingConstants.LEADING)))
+    rightPane.add(brush(fontSize, new JLabel(msg.legendForFood, makeMonotoneIcon(fontSize, Color.GREEN), SwingConstants.LEADING)))
+    rightPane.add(brush(fontSize, new JLabel(msg.legendForJunk, makeMonotoneIcon(fontSize, Color.BLUE), SwingConstants.LEADING)))
+    rightPane.add(brush(fontSize, new JLabel(msg.legendForSelection, makeMonotoneIcon(fontSize, Color.MAGENTA), SwingConstants.LEADING)))
     rightPane.add(wellAlignedBox(textWidth, fontSize))
 
-    val statTime = new StatText(fontSize, "Время: ")
-    val statNBacteria = new StatText(fontSize, "Живых бактерий: ")
-    val statNMonsters = new StatText(fontSize, "Из них потомков монстров: ")
-    val statAverageHealth = new StatText(fontSize, "Среднее здоровье: ")
-    val statSumEnergy = new StatText(fontSize, "Количество еды: ")
+    val statTime = new StatText(fontSize, msg.statsTimePassed)
+    val statNBacteria = new StatText(fontSize, msg.statsCountAlive)
+    val statNMonsters = new StatText(fontSize, msg.statsCountMonsters)
+    val statAverageHealth = new StatText(fontSize, msg.statsAvgHealth)
+    val statSumEnergy = new StatText(fontSize, msg.statsFood)
 
-    rightPane.add(brush(fontSize, new JLabel("Статистика:")))
+    rightPane.add(brush(fontSize, new JLabel(msg.stats)))
     rightPane.add(statTime)
     rightPane.add(statNBacteria)
     rightPane.add(statNMonsters)
@@ -178,14 +180,14 @@ object Main {
     rightPane.add(statSumEnergy)
     rightPane.add(wellAlignedBox(textWidth, fontSize))
 
-    val statMaxLifeSpan = new StatText(fontSize, "Максимальный срок жизни: ")
-    val statMaxHealth = new StatText(fontSize, "Максимальное здоровье: ")
-    val statGenome = new StatText(fontSize, "Максимальный размер генома: ")
-    val statMaxChildren = new StatText(fontSize, "Максимальное число детей: ")
-    val statMaxDistance = new StatText(fontSize, "Самый длинный путь: ")
-    val statMaxSpeed = new StatText(fontSize, "Самая большая скорость: ")
+    val statMaxLifeSpan = new StatText(fontSize, msg.bestLifeSpan)
+    val statMaxHealth = new StatText(fontSize, msg.bestHealth)
+    val statGenome = new StatText(fontSize, msg.bestGenomeSize)
+    val statMaxChildren = new StatText(fontSize, msg.bestChildren)
+    val statMaxDistance = new StatText(fontSize, msg.bestDistance)
+    val statMaxSpeed = new StatText(fontSize, msg.bestSpeed)
 
-    rightPane.add(brush(fontSize, new JLabel("Самые-самые:")))
+    rightPane.add(brush(fontSize, new JLabel(msg.best)))
     rightPane.add(statMaxHealth)
     rightPane.add(statMaxLifeSpan)
     rightPane.add(statGenome)
@@ -194,13 +196,13 @@ object Main {
     rightPane.add(statMaxSpeed)
     rightPane.add(wellAlignedBox(textWidth, fontSize))
 
-    val actionsEat = new StatText(fontSize, "Питаться: ")
-    val actionsMove = new StatText(fontSize, "Двигаться: ")
-    val actionsFork = new StatText(fontSize, "Делиться: ")
-    val actionsCW = new StatText(fontSize, "Вращаться (по часовой): ")
-    val actionsCCW = new StatText(fontSize, "Вращаться (против часовой): ")
+    val actionsEat = new StatText(fontSize, msg.nActionsFeed)
+    val actionsMove = new StatText(fontSize, msg.nActionsMove)
+    val actionsFork = new StatText(fontSize, msg.nActionsFork)
+    val actionsCW = new StatText(fontSize, msg.nActionsCW)
+    val actionsCCW = new StatText(fontSize, msg.nActionsCCW)
 
-    rightPane.add(brush(fontSize, new JLabel("Число действий:")))
+    rightPane.add(brush(fontSize, new JLabel(msg.nActions)))
     rightPane.add(actionsEat)
     rightPane.add(actionsMove)
     rightPane.add(actionsFork)
@@ -208,13 +210,13 @@ object Main {
     rightPane.add(actionsCCW)
     rightPane.add(wellAlignedBox(textWidth, fontSize))
 
-    val mouseDoNothing = brush(fontSize, new JToggleButton("Ничего не делать"))
-    val mouseSmallFood = brush(fontSize, new JToggleButton("Добавить еды (малый радиус)"))
-    val mouseLargeFood = brush(fontSize, new JToggleButton("Добавить еды (большой радиус"))
-    val mouseSmallDestroy = brush(fontSize, new JToggleButton("Все стереть (малый радиус)"))
-    val mouseLargeDestroy = brush(fontSize, new JToggleButton("Все стереть (большой радиус)"))
-    val mouseDumpGenome = brush(fontSize, new JToggleButton("Вывести геном на консоль"))
-    val mousePutMonster = brush(fontSize, new JToggleButton("Добавить монстра"))
+    val mouseDoNothing = brush(fontSize, new JToggleButton(msg.mouseClickNothing))
+    val mouseSmallFood = brush(fontSize, new JToggleButton(msg.mouseClickFoodSmall))
+    val mouseLargeFood = brush(fontSize, new JToggleButton(msg.mouseClickFoodLarge))
+    val mouseSmallDestroy = brush(fontSize, new JToggleButton(msg.mouseClickNukeSmall))
+    val mouseLargeDestroy = brush(fontSize, new JToggleButton(msg.mouseClickNukeLarge))
+    val mouseDumpGenome = brush(fontSize, new JToggleButton(msg.mouseClickPrintGenome))
+    val mousePutMonster = brush(fontSize, new JToggleButton(msg.mouseClickAddMonster))
 
     val clickCommands = new LinkedBlockingDeque[(Field, Field.StepStatistics) => Unit]()
     val mouseClickGroup = new ButtonGroup
@@ -227,7 +229,7 @@ object Main {
     mouseClickGroup.add(mousePutMonster)
     mouseDoNothing.setSelected(true)
 
-    rightPane.add(brush(fontSize, new JLabel("Действие клика мыши:")))
+    rightPane.add(brush(fontSize, new JLabel(msg.mouseClick)))
     rightPane.add(mouseDoNothing)
     rightPane.add(mouseSmallFood)
     rightPane.add(mouseLargeFood)
@@ -239,27 +241,27 @@ object Main {
 
     var lastMagentaLabel = 0
 
-    val magentaNone = brush(fontSize, new JToggleButton(new AbstractAction("Не выделять") {
+    val magentaNone = brush(fontSize, new JToggleButton(new AbstractAction(msg.highlightNothing) {
       override def actionPerformed(e: ActionEvent): Unit = view.setMagentaLabel(-2)
     }))
-    val magentaMonster = brush(fontSize, new JToggleButton(new AbstractAction("Монстры и их потомки") {
+    val magentaMonster = brush(fontSize, new JToggleButton(new AbstractAction(msg.highlightMonsters) {
       override def actionPerformed(e: ActionEvent): Unit = view.setMagentaLabel(-1)
     }))
-    val magentaLongestGenome = brush(fontSize, new JToggleButton(new AbstractAction("Найти самый длинный геном") {
+    val magentaLongestGenome = brush(fontSize, new JToggleButton(new AbstractAction(msg.highlightLongest) {
       override def actionPerformed(e: ActionEvent): Unit = {
         lastMagentaLabel += 1
         view.setMagentaLabel(lastMagentaLabel)
         clickCommands.addLast((e, _) => e.findAndMarkLongestGenome(lastMagentaLabel))
       }
     }))
-    val magentaMostProductive = brush(fontSize, new JToggleButton(new AbstractAction("Максимальное число детей") {
+    val magentaMostProductive = brush(fontSize, new JToggleButton(new AbstractAction(msg.highlightMaxChildren) {
       override def actionPerformed(e: ActionEvent): Unit = {
         lastMagentaLabel += 1
         view.setMagentaLabel(lastMagentaLabel)
         clickCommands.addLast((e, _) => e.findAndMarkMostProductive(lastMagentaLabel))
       }
     }))
-    val magentaFastest = brush(fontSize, new JToggleButton(new AbstractAction("Самая быстрая бактерия") {
+    val magentaFastest = brush(fontSize, new JToggleButton(new AbstractAction(msg.highlightFastest) {
       override def actionPerformed(e: ActionEvent): Unit = {
         lastMagentaLabel += 1
         view.setMagentaLabel(lastMagentaLabel)
@@ -275,7 +277,7 @@ object Main {
     magentaGroup.add(magentaFastest)
     magentaMonster.setSelected(true)
 
-    rightPane.add(brush(fontSize, new JLabel("Выбор выделенного штамма:")))
+    rightPane.add(brush(fontSize, new JLabel(msg.highlight)))
     rightPane.add(magentaNone)
     rightPane.add(magentaMonster)
     rightPane.add(magentaLongestGenome)
@@ -283,7 +285,7 @@ object Main {
     rightPane.add(magentaFastest)
     rightPane.add(Box.createVerticalGlue())
 
-    val restartButton = new JButton("НАЧАТЬ ЗАНОВО")
+    val restartButton = new JButton(msg.restart)
     val restarted = new AtomicBoolean(false)
     restartButton.setBackground(Color.RED.darker().darker())
     restartButton.setForeground(Color.WHITE)
@@ -311,7 +313,7 @@ object Main {
       }
     })
 
-    val window = new JFrame("Бактерии")
+    val window = new JFrame(msg.title)
     window.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE)
     window.setLayout(new BorderLayout())
     window.add(view, BorderLayout.CENTER)
