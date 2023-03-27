@@ -3,9 +3,23 @@ Artificial Bacteria
 ## Description
 
 The code is a sort of a system where bacteria live (they can fork, eat, move
-and die). Every bacteria has a genome, which is the program it uses to live.
+and die). Every bacterium has a genome, which is the program it uses to live.
 The length of the genome has an impact on its life, since it becomes harder
 to move and more energy is burned even when not moving.
+
+Each bacterium has some energy, which it has to spend for living on each time instant,
+and which depends linearly on its genome size. Furthermore, it has to spend some
+energy on moving and rotating. It can also fork: if this happens, the energy is distributed
+between the two new bacteria, and one of them mutates. If the energy falls below zero,
+the bacterium dies.
+
+The genome follows the Cartesian Genetic Programming design,
+which is something between a generic program and a neural network.
+There are some inputs, which are the bacterium's current stats (weight and health),
+how many food and junk the neighboring cells contain, and whether there are
+other bacteria nearby. The program can perform certain mathematical operations on them
+and output potentials for the actions (do nothing, move, rotate, fork), where the action
+with the maximum potential is taken.
 
 ## Installing and running
 
