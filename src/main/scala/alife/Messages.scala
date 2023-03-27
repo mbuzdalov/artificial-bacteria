@@ -98,7 +98,7 @@ object Messages {
     def highlightMonsters: String = "Monsters and their children"
     def highlightLongest: String = "The longest genome"
     def highlightMaxChildren: String = "Max number of children"
-    def highlightFastest: String = "The fastest bacteria"
+    def highlightFastest: String = "The fastest bacterium"
   }
 
   object Russian extends Messages {
