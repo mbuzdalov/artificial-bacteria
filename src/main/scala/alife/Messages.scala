@@ -75,7 +75,7 @@ object Messages {
     def bestGenomeSize: String = "Max genome size: "
     def bestChildren: String = "Max no of children: "
     def bestDistance: String = "The longest path: "
-    def bestSpeed: String = "The bigged speed: "
+    def bestSpeed: String = "The highest speed: "
 
     def nActions: String = "Total number of actions:"
     def nActionsFeed: String = "Feed: "
