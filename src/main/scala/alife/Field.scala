@@ -14,7 +14,6 @@ class Field(val width: Int, val height: Int) {
   private val health = new Field.Matrix[Double](width, height)
   private val individual = new Field.Matrix[Individual](width, height)
   private val direction = new Field.Matrix[Int](width, height)
-  private val action = new Field.Matrix[Int](width, height)
   private val sumDistancesL, sumDistancesR = new Array[Int](height)
 
   private var maxGenomeSize = 0
@@ -124,22 +123,22 @@ class Field(val width: Int, val height: Int) {
             da.offset += 1
             i += 1
           }
-          action(x, y) = -1
+          var chosenAction = -1
           i = 0
           val iMax = math.min(g.size, Action.all.size)
           while (i < iMax) {
             // In `da(i)`, `i` is the offset backwards, so we have to add 1 to get the i-th element from the end,
             // which is what we want from action.
-            if (Action.all(i).canApply(this, x, y, constants) && (action(x, y) == -1 || da(i + 1) > da(action(x, y) + 1))) {
-              action(x, y) = i
+            if (Action.all(i).canApply(this, x, y, constants) && (chosenAction == -1 || da(i + 1) > da(chosenAction + 1))) {
+              chosenAction = i
             }
             i += 1
           }
-          if (action(x, y) != -1) {
-            val theAction = Action.all(action(x, y))
+          if (chosenAction != -1) {
+            val theAction = Action.all(chosenAction)
             ind.recordAction(theAction)
             theAction.apply(this, x, y, constants)
-            actionCount(action(x, y)) += 1
+            actionCount(chosenAction) += 1
           }
         }
         x += 1
