@@ -23,13 +23,13 @@ with the maximum potential is taken.
 
 ## Installing and running
 
-The project is written in Scala, the current version is `2.13.10` (any `2.13.x` will do).
-Scala itself runs on a Java virtual machine. Java versions `1.8` and `11` have been tested.
+The project is written in Scala, the current version is `2.13.18`.
+Scala itself runs on a Java virtual machine. Java versions from `1.8` to `26` have been tested.
 For the user interface, the project uses Swing, and for sound the `javax.sound.sampled`
 infrastructure is used. Other than the standard libraries, the project has no dependencies.
 
 The project uses `sbt`. To start, type `sbt run` in the console.
-A rather elaborate configuration is availave in `config.properties`
+A rather elaborate configuration is available in `config.properties`
 with most parameters reasonably well commented.
 
 ## History
@@ -38,7 +38,7 @@ The project started in 2016 during the GECCO conference, inspired by some talk
 (which one, I cannot currently remember). In a sense, I see it as a part of
 a large meta-project about the simplest possible rules that enable the proper
 evolution: of course this project is far from having simplest rules, but some
-features, such as the minimim field size requirements, can be seen even at this level.
+features, such as the minimum field size requirements, can be seen even at this level.
 
 In 2017-2018, it was reinvented as a separate codebase from the big
 framework for evolutionary algorithms I was then developing. Some time has been
