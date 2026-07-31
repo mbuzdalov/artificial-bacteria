@@ -239,7 +239,7 @@ object Field {
   val relativeLocationForward = 1
   val numberOfRelativeLocations: Int = relativeLocationsFW.length
 
-  class DataAccess(val array: Array[Double]) extends (Int => Double) {
+  private class DataAccess(val array: Array[Double]) extends (Int => Double) {
     var offset = 0
     def apply(index: Int): Double = {
       val idx = offset - index
@@ -251,8 +251,9 @@ object Field {
     }
   }
 
-  class Matrix[@specialized(Double, Int) T : scala.reflect.ClassTag](width: Int, height: Int) {
-    val data: Array[Array[T]] = Array.ofDim(height, width)
+  //noinspection ScalaUnusedSymbol this is for ClassTag, actually used in Array.ofDim.
+  private class Matrix[@specialized(Double, Int) T : scala.reflect.ClassTag](width: Int, height: Int) {
+    private val data: Array[Array[T]] = Array.ofDim(height, width)
     def apply(x: Int, y: Int): T = data(mod(y, height))(mod(x, width))
     def update(x: Int, y: Int, value: T): Unit = data(mod(y, height))(mod(x, width)) = value
 
