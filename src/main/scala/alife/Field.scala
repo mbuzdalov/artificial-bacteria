@@ -128,7 +128,9 @@ class Field(val width: Int, val height: Int) {
           i = 0
           val iMax = math.min(g.size, Action.all.size)
           while (i < iMax) {
-            if (Action.all(i).canApply(this, x, y, constants) && (action(x, y) == -1 || da(i + 1) > da(action(x, y)))) {
+            // In `da(i)`, `i` is the offset backwards, so we have to add 1 to get the i-th element from the end,
+            // which is what we want from action.
+            if (Action.all(i).canApply(this, x, y, constants) && (action(x, y) == -1 || da(i + 1) > da(action(x, y) + 1))) {
               action(x, y) = i
             }
             i += 1
