@@ -77,9 +77,7 @@ class Field(val width: Int, val height: Int) {
       }
     }
   }
-
-  def rotate(x: Int, y: Int, value: Int): Unit = direction(x, y) = (direction(x, y) + value) & 3
-
+  
   private[this] trait IntIntDoubleFun {
     def apply(a: Int, b: Int): Double
   }
