@@ -78,7 +78,7 @@ object Instruction {
   def random(position: Int): Instruction = {
     val rng = ThreadLocalRandom.current()
 
-    def nextPos() = rng.nextInt(position + 1) - 1
+    def nextPos() = rng.nextInt(position + 1)
     def nextLoc() = rng.nextInt(Field.numberOfRelativeLocations)
 
     rng.nextInt(15) match {
