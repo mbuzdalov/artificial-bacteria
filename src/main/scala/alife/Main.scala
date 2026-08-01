@@ -149,6 +149,7 @@ object Main {
     val enableGenomeDumping = properties.getProperty("enableGenomeDumping").toBoolean
     val enableLegend = properties.getProperty("enableLegend").toBoolean
     val legendIsOnRight = properties.getProperty("legendIsOnRight").toBoolean
+    val autoPause = properties.getProperty("autoPause").toInt
 
     initializeFieldRandomly(field, initialBacteriaProbability, initialGenomeLength, initialHealth)
     val view = new FieldVisualizer(field, pixelScale)
@@ -285,6 +286,24 @@ object Main {
     rightPane.add(magentaFastest)
     rightPane.add(Box.createVerticalGlue())
 
+    val pauseButton = new JButton(msg.pause)
+    val paused = new AtomicBoolean(false)
+    
+    def executePause(newPaused: Boolean): Unit = {
+      paused.set(newPaused)
+      pauseButton.setText(if (newPaused) msg.resume else msg.pause) // the next action of the button is inverted
+    }
+    
+    pauseButton.setBackground(Color.BLUE.darker().darker())
+    pauseButton.setForeground(Color.WHITE)
+    pauseButton.setFont(pauseButton.getFont.deriveFont(fontSize.toFloat * 2))
+    pauseButton.setAlignmentX(Component.LEFT_ALIGNMENT)
+    pauseButton.addActionListener(_ => {
+      executePause(!paused.get())
+    })
+    
+    rightPane.add(pauseButton)
+    
     val restartButton = new JButton(msg.restart)
     val restarted = new AtomicBoolean(false)
     restartButton.setBackground(Color.RED.darker().darker())
@@ -296,6 +315,7 @@ object Main {
       mouseDoNothing.setSelected(true)
       magentaMonster.setSelected(true)
       restarted.set(true)
+      executePause(false)
     })
 
     rightPane.add(restartButton)
@@ -365,6 +385,17 @@ object Main {
         statMaxDistance.setValue(actionStatistics.maxTravelDistance.toString)
         statMaxLifeSpan.setValue(actionStatistics.maxLife.toString)
       })
+      
+      if (autoPause > 0 && generation > 0 && generation % autoPause == 0) {
+        SwingUtilities.invokeAndWait(() => {
+          executePause(true)
+        })
+      }
+      
+      while (paused.get() && window.isVisible) {
+        Thread.sleep(100)
+      }
+      
       work(generation + 1)
     }
     work(0)

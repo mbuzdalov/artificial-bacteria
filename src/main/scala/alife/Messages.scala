@@ -2,6 +2,8 @@ package alife
 
 trait Messages {
   def title: String
+  def pause: String
+  def resume: String
   def restart: String
 
   def legend: String
@@ -54,6 +56,8 @@ object Messages {
 
   private object English extends Messages {
     def title: String = "Artificial Bacteria"
+    def pause: String = "PAUSE"
+    def resume: String = "RESUME"
     def restart: String = "BEGIN ANEW"
 
     def legend: String = "Legend:"
@@ -103,6 +107,8 @@ object Messages {
 
   private object Russian extends Messages {
     def title: String = "Бактерии"
+    def pause: String = "ПАУЗА"
+    def resume: String = "ПРОДОЛЖИТЬ"
     def restart: String = "НАЧАТЬ ЗАНОВО"
 
     def legend: String = "Обозначения:"
