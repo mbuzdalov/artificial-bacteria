@@ -52,7 +52,7 @@ trait Messages {
 object Messages {
   def apply(lang: String): Messages = if (lang == "ru") Russian else English
 
-  object English extends Messages {
+  private object English extends Messages {
     def title: String = "Artificial Bacteria"
     def restart: String = "BEGIN ANEW"
 
@@ -88,8 +88,8 @@ object Messages {
     def mouseClickNothing: String = "Do nothing"
     def mouseClickFoodSmall: String = "Add food (small radius)"
     def mouseClickFoodLarge: String = "Add food (large radius)"
-    def mouseClickNukeSmall: String = "Nuke'em all (small radius)"
-    def mouseClickNukeLarge: String = "Nuke'em all (large radius)"
+    def mouseClickNukeSmall: String = "Erase all (small radius)"
+    def mouseClickNukeLarge: String = "Erase all (large radius)"
     def mouseClickPrintGenome: String = "Print genome to console"
     def mouseClickAddMonster: String = "Add a monster"
 
@@ -101,7 +101,7 @@ object Messages {
     def highlightFastest: String = "The fastest bacterium"
   }
 
-  object Russian extends Messages {
+  private object Russian extends Messages {
     def title: String = "Бактерии"
     def restart: String = "НАЧАТЬ ЗАНОВО"
 
