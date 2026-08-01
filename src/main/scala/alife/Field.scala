@@ -156,17 +156,23 @@ class Field(val width: Int, val height: Int) {
     var maxDistance = 0
     var maxSpeed = 0.0
 
-    val synthDecay = math.exp(-stepNumber * constants.synthesisDecay)
+    val synthDecay = math.exp(-stepNumber * constants.synthesisDecay) // initially 1, then decreases to 0
+    val sineDecay = math.exp(-stepNumber * constants.spotDecay)       // initially 1, then decreases to 0
     val synthesisBase = 2 * (synthDecay * constants.synthesisInit + (1 - synthDecay) * constants.synthesisFinal)
 
+    val spotXOffset = 2 * math.Pi * stepNumber * constants.spotSpeedX
+    val spotYOffset = 2 * math.Pi * stepNumber * constants.spotSpeedY
+    val spotXScale = math.Pi * constants.spotPeriodX / width
+    val spotYScale = math.Pi * constants.spotPeriodY / height
+    
     y = 0
     while (y < height) {
       var x = 0
+      val sinY = math.sin(y * spotYScale + spotYOffset)
+
       while (x < width) {
-        val cosX = math.cos(x * math.Pi * constants.spotPeriodX / width + 2 * math.Pi * stepNumber * constants.spotSpeedX)
-        val sinY = math.sin(y * math.Pi * constants.spotPeriodY / height + 2 * math.Pi * stepNumber * constants.spotSpeedY)
-        val decay = math.exp(-stepNumber * constants.spotDecay) // initially 1, then decreases to 0
-        val synthesis = synthesisBase * ((1 - decay) * cosX * cosX * sinY * sinY + decay)
+        val cosX = math.cos(x * spotXScale + spotXOffset)
+        val synthesis = synthesisBase * ((1 - sineDecay) * cosX * cosX * sinY * sinY + sineDecay)
 
         energy(x, y) += debris(x, y) * constants.debrisToEnergy
         debris(x, y) *= (1 - constants.debrisDegradation)
