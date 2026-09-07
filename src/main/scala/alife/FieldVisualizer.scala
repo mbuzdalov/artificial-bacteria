@@ -11,6 +11,7 @@ class FieldVisualizer(field: Field, pixelScale: Int) extends JPanel:
   private final val heightInPixels = field.height * pixelScale
   private final val pixels = Array.ofDim[Int](widthInPixels * heightInPixels)
 
+  private var maxDebris = 0.0
   private var maxHealth = 0.0
   private var maxEnergy = 0.0
   private val image = BufferedImage(widthInPixels, heightInPixels, BufferedImage.TYPE_INT_ARGB)
@@ -25,10 +26,12 @@ class FieldVisualizer(field: Field, pixelScale: Int) extends JPanel:
   def resetState(): Unit =
     maxHealth = 0
     maxEnergy = 0
+    maxDebris = 0
 
   def fetchField(): Unit =
     maxHealth *= 0.95
     maxEnergy *= 0.95
+    maxDebris *= 0.95
 
     val height = field.height
     val width = field.width
@@ -37,15 +40,15 @@ class FieldVisualizer(field: Field, pixelScale: Int) extends JPanel:
       Loops.foreach(0, width): x =>
         maxHealth = math.max(maxHealth, field.getHealth(x, y))
         maxEnergy = math.max(maxEnergy, field.getEnergy(x, y))
-        maxEnergy = math.max(maxEnergy, field.getDebris(x, y))
+        maxDebris = math.max(maxDebris, field.getDebris(x, y))
 
     Loops.foreach(0, height): y =>
       Loops.foreach(0, width): x =>
         val g = field.getIndividual(x, y)
-        val z = if g != null && g.label == magentaLabel then 0xffff00ff else 
+        val z = if g != null && g.label == magentaLabel then 0xffff00ff else
           val h = (visualConversion(field.getHealth(x, y) / maxHealth) * 255).toInt
           val e = (visualConversion(field.getEnergy(x, y) / maxEnergy) * 255).toInt
-          val d = (visualConversion(field.getDebris(x, y) / maxEnergy) * 255).toInt
+          val d = (visualConversion(field.getDebris(x, y) / maxDebris) * 255).toInt
           (h << 16) | (e << 8) | d | 0xff000000
         Loops.foreach(0, pixelScale): dy =>
           Loops.foreach(0, pixelScale): dx =>

@@ -144,11 +144,13 @@ class Field(val width: Int, val height: Int):
         val synthesis = synthesisBase * ((1 - sineDecay) * cosX * cosX * sinY * sinY + sineDecay)
 
         energy(x, y) += debris(x, y) * constants.debrisToEnergy
-        debris(x, y) *= (1 - constants.debrisDegradation)
+        debris(x, y) *= 1 - constants.debrisDegradation - constants.debrisToEnergy
         energy(x, y) += ThreadLocalRandom.current().nextDouble() * synthesis
         sumEnergies += energy(x, y)
         maxEnergy = math.max(maxEnergy, energy(x, y))
         if individual(x, y) != null then
+          val spentForLiving = math.min(constants.idleCost, health(x, y))
+          debris(x, y) += spentForLiving * constants.debrisFromActions
           setIndividual(x, y, individual(x, y), direction(x, y), health(x, y) - constants.idleCost)
           sumHealths += health(x, y)
           maxHealth = math.max(maxHealth, health(x, y))
@@ -227,7 +229,7 @@ object Field:
                             maxLife: Int, maxChildren: Int, maxTravelDistance: Int, maxSpeed: Double, nMonsters: Int)
 
   case class Constants(rotationCost: Double, moveCost: Double, eatCost: Double, forkCost: Double,
-                       debrisDegradation: Double, debrisToEnergy: Double,
+                       debrisDegradation: Double, debrisToEnergy: Double, debrisFromActions: Double,
                        synthesisInit: Double, synthesisFinal: Double, synthesisDecay: Double,
                        idleCost: Double, healthMultiple: Double, healthIncrementMultiple: Double,
                        spotPeriodX: Double, spotSpeedX: Double, spotPeriodY: Double, spotSpeedY: Double,

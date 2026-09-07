@@ -104,6 +104,7 @@ object Main:
       forkCost = properties.getProperty("forkCost").toDouble,
       debrisDegradation = properties.getProperty("debrisDegradation").toDouble,
       debrisToEnergy = properties.getProperty("debrisToEnergy").toDouble,
+      debrisFromActions = properties.getProperty("debrisFromActions").toDouble,
       synthesisInit = properties.getProperty("synthesisInit").toDouble,
       synthesisFinal = properties.getProperty("synthesisFinal").toDouble,
       synthesisDecay = properties.getProperty("synthesisDecay").toDouble,

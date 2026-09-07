@@ -55,26 +55,29 @@ object Action:
       assert(canApply(field, x, y, constants))
       val e = constants.rotationCost * (field.getHealth(x, y) + field.getWeight(x, y))
       field.setIndividual(x, y, field.getIndividual(x, y), (field.getDirection(x, y) + rotation) & 3, field.getHealth(x, y) - e)
-      field.setDebris(x, y, field.getDebris(x, y) + e / 2)
+      field.setDebris(x, y, field.getDebris(x, y) + e * constants.debrisFromActions)
   
   /**
    * The negative (counter-clockwise) rotation:
    * 1) This action can always be applied.
-   * 2) The cost of this action is (bacterium's health + bacterium's weight) times `rotationCost`.
+   * 2) The emergy required for this action is (bacterium's health + bacterium's weight) times `rotationCost`.
+   * 3) This energy times `debrisFromActions` is deposited as debris.
    */
   case object RotateMinus extends Rotate(-1, 1)
   
   /**
    * The positive (clockwise) rotation:
    * 1) This action can always be applied.
-   * 2) The cost of this action is (bacterium's health + bacterium's weight) times `rotationCost`.
+   * 2) The energy required for this action is (bacterium's health + bacterium's weight) times `rotationCost`.
+   * 3) This energy times `debrisFromActions` is deposited as debris.
    */
   case object RotatePlus  extends Rotate(+1, 2)
   
   /**
    * The move one step forward in the frontal direction of the bacterium.:
    * 1) This action can only be applied if the destination cell contains no other bacteria.
-   * 2) The cost of this action is (bacterium's health + bacterium's weight + debris in current cell) times `moveCost`.
+   * 2) The energy required for this action is (bacterium's health + bacterium's weight + debris in current cell) times `moveCost`.
+   * 3) This energy times `debrisFromActions` is deposited as debris.
    */
   case object Move extends Action:
     override def index: Int = 3
@@ -88,17 +91,17 @@ object Action:
       val d = field.getDirection(x, y)
       field.setIndividualRelative(x, y, Field.relativeLocationForward, g, d, h - e)
       field.setIndividual(x, y, null, 0, 0)
-      field.setDebris(x, y, field.getDebris(x, y) + e / 2)
+      field.setDebris(x, y, field.getDebris(x, y) + e * constants.debrisFromActions)
   
   /**
    * The food consumption action:
    * 1) This action can always be applied.
-   * 2) The direct cost of this action is zero.
-   * 3) The amount of the food eaten is the minimum of:
+   * 2) The amount of the food eaten is the minimum of:
    *    - the slack of the bacterium's health to the global limit, which is bacterium's weight times `healthMultiple`
    *    - the single intake amount, which is bacterium's weight times `healthIncrementMultiple`
    *    - the amount of food in the current cell
-   * 4) Not all food can be eaten, (1 - `eatCost`) is wasted.
+   * 3) Not all food can be eaten, (1 - `eatCost`) is spent as an energy required for assisting the consumption.
+   * 4) This energy times `debrisFromActions` is deposited as debris.
    */
   case object Eat extends Action:
     override def index: Int = 4
@@ -113,13 +116,15 @@ object Action:
       val eatAmount = math.max(0, math.min(intakeLimitGlobal, intakeLimitLocal))
       field.setEnergy(x, y, field.getEnergy(x, y) - eatAmount)
       field.setIndividual(x, y, field.getIndividual(x, y), field.getDirection(x, y), field.getHealth(x, y) + eatAmount * (1 - constants.eatCost))
+      field.setDebris(x, y, field.getDebris(x, y) + eatAmount * constants.eatCost * constants.debrisFromActions)
   
   /**
    * The fork action, which creates another bacterium that is a mutant of the current one:
    * 1) This action can only be applied if the cell in the frontal direction contains no bacteria.
-   * 2) The cost of this action is bacterium's weight times `forkCost`.
-   * 3) The health is divided between the old and the new bacteria.
-   * 4) The new bacteria additionally incurs all move costs (from the current to the target cell).
+   * 2) The energy required for this action is bacterium's weight times `forkCost`.
+   * 3) This energy times `debrisFromActions` is deposited as debris.
+   * 4) The health is divided between the old and the new bacteria.
+   * 5) The new bacteria additionally incurs all move costs (from the current to the target cell).
    */
   case object Fork extends Action:
     override def index: Int = 0
@@ -136,3 +141,4 @@ object Action:
         field.setIndividual(x, y, Operators.mutate(g), d, h / 2)
         Move.apply(field, x, y, constants)
       field.setIndividual(x, y, g, d, h / 2)
+      field.setDebris(x, y, field.getDebris(x, y) + e * constants.debrisFromActions)
