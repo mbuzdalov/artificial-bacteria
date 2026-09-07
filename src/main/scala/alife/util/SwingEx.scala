@@ -7,14 +7,14 @@ import javax.swing.SwingUtilities
  */
 object SwingEx:
   /**
-   * Invokes the given body later in the Swing thread. Wraps `SwingUtilities.invokeLater`.
+   * Invokes the given `body` later in the Swing thread. Wraps `SwingUtilities.invokeLater`.
    * @param body the body to invoke
    */
   inline def invokeLater(inline body: => Any): Unit =
     SwingUtilities.invokeLater(() => body)
   
   /**
-   * Invokes the given body in the Swing thread and block until it succeeds. Wraps `SwingUtilities.invokeAndWait`.
+   * Invokes the given `body` in the Swing thread and block until it succeeds. Wraps `SwingUtilities.invokeAndWait`.
    * @param body the body to invoke.
    */
   inline def invokeAndWait(inline body: => Any): Unit =

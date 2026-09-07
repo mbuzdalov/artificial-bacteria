@@ -16,9 +16,9 @@ object Loops:
   /**
    * This loops from an int `from`, inclusively,
    * until an int `until`, exclusively, and executes the specified body for each of the values.
-   * 
+   *
    * This is an inline function which inlines the body, so accessing local `var`s does not incur a runtime penalty.
-   * 
+   *
    * @param from the initial value (inclusive)
    * @param until the final value (exclusive)
    * @param body the loop body to execute.
@@ -34,7 +34,7 @@ object Loops:
    * and executes the specified body for each of the values.
    *
    * This is an inline function which inlines the body, so accessing local `var`s does not incur a runtime penalty.
-   * No bound checking is performed; `to` equal to `Int.MaxValue` would loop foreever.
+   * No bound checking is performed; `to` equal to `Int.MaxValue` would loop forever.
    *
    * @param from the initial value (inclusive)
    * @param to the final value (inclusive)

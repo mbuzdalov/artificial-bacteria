@@ -3,9 +3,24 @@ package alife
 import java.util.concurrent.ThreadLocalRandom
 
 /**
- * A trait for all instructions.
+ * A trait for all Cartesian Genetic Programming instructions used in this system.
+ * Every instruction returns a `Double` value
+ * by (optionally) querying the field and the results of preceding instructions.
  */
 sealed trait Instruction:
+  /**
+   * Computes the value of the instruction using the information provided.
+   * The `data` argument deserves an explanation. `data(i)` refers to the result of computation of the `i`-th instruction
+   * before the current one. That is, `data(1)` returns the result of the previous instruction executed,
+   * `data(2)` the one preceding that, and so on. Illegal values result in 0 being returned,
+   * which also includes `data(0)` being currently computed.
+   *
+   * @param field the field to query.
+   * @param x the X coordinate of the current individual.
+   * @param y the Y coordinate of the current individual.
+   * @param data the accessor to the previous computation results.
+   * @return the computed value.
+   */
   def apply(field: Field, x: Int, y: Int, data: Instruction.DA): Double
 
 /**
@@ -13,52 +28,123 @@ sealed trait Instruction:
  */
 object Instruction:
   private type DA = Int => Double
-
+  
+  /**
+   * Always returns a constant value.
+   * @param value the constant value.
+   */
   case class Const(value: Double) extends Instruction:
     override def apply(field: Field, x: Int, y: Int, data: DA): Double = value
-
+  
+  /**
+   * Returns the weight of the current individual.
+   */
   case object MyWeight extends Instruction:
     override def apply(field: Field, x: Int, y: Int, data: DA): Double = field.getWeight(x, y)
-
+  
+  /**
+   * Returns the health of the current individual.
+   */
   case object MyHealth extends Instruction:
     override def apply(field: Field, x: Int, y: Int, data: DA): Double = field.getHealth(x, y)
-
+  
+  /**
+   * Returns the energy at a given relative location to the current individual.
+   * @param relativeLocation the relative location.
+   */
   case class EnergyAt(relativeLocation: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: DA): Double = field.getEnergyRelative(x, y, relativeLocation)
-
+  
+  /**
+   * Returns the amount of debris at a given relative location to the current individual.
+   * @param relativeLocation the relative location.
+   */
   case class DebrisAt(relativeLocation: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: DA): Double = field.getDebrisRelative(x, y, relativeLocation)
-
+  
+  /**
+   * Returns the health of an individual at a given relative location to the current individual, 0 if none.
+   * @param relativeLocation the relative location.
+   */
   case class HealthAt(relativeLocation: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: DA): Double = field.getHealthRelative(x, y, relativeLocation)
-
+  
+  /**
+   * Returns the sine of the other instruction's value.
+   * @param arg the index of the other instruction acting as an argument.
+   */
   case class Sin(arg: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: DA): Double = math.sin(data(arg))
-
+  
+  /**
+   * Returns the cosine of the other instruction's value.
+   * @param arg the index of the other instruction acting as an argument.
+   */
   case class Cos(arg: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: DA): Double = math.cos(data(arg))
-
+  
+  /**
+   * Returns the exponent of the other instruction's value.
+   * @param arg the index of the other instruction acting as an argument.
+   */
   case class Exp(arg: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: DA): Double = math.exp(data(arg))
-
+  
+  /**
+   * Returns the logarithm of the other instruction's value.
+   * @param arg the index of the other instruction acting as an argument.
+   */
   case class Log(arg: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: DA): Double = math.log(data(arg))
-
+  
+  /**
+   * Returns the sum of values of two other instructions.
+   * @param arg1 the index of the other instruction serving as the first argument.
+   * @param arg2 the index of the other instruction serving as the second argument.
+   */
   case class Plus(arg1: Int, arg2: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: DA): Double = data(arg1) + data(arg2)
-
+  
+  /**
+   * Returns the difference of values of two other instructions.
+   * @param arg1 the index of the other instruction serving as the first argument.
+   * @param arg2 the index of the other instruction serving as the second argument.
+   */
   case class Minus(arg1: Int, arg2: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: DA): Double = data(arg1) - data(arg2)
-
+  
+  /**
+   * Returns the product of values of two other instructions.
+   * @param arg1 the index of the other instruction serving as the first argument.
+   * @param arg2 the index of the other instruction serving as the second argument.
+   */
   case class Times(arg1: Int, arg2: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: DA): Double = data(arg1) * data(arg2)
-
+  
+  /**
+   * Returns the ratio of values of two other instructions.
+   * @param arg1 the index of the other instruction serving as the first argument.
+   * @param arg2 the index of the other instruction serving as the second argument.
+   */
   case class Divide(arg1: Int, arg2: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: DA): Double = data(arg1) / data(arg2)
-
+  
+  /**
+   * Returns the soft comparison of values of two other instructions:
+   * 1) if the arguments are equal, 0 is returned;
+   * 2) if the first argument is smaller than the second one, a positive value is returned: the bigger the difference, the closer the value to +1;
+   * 3) if the first argument is larger than the first one, a negative value is returned: the bigger the difference, the closer the value to -1.
+   * @param arg1 the index of the other instruction serving as the first argument.
+   * @param arg2 the index of the other instruction serving as the second argument.
+   */
   case class Sigmoid(arg1: Int, arg2: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: DA): Double = 2 / (1 + math.exp(data(arg1) - data(arg2))) - 1
-
+  
+  /**
+   * Generates a new random instruction for the given position in the individual.
+   * @param position the 0-based position of the instruction being generated.
+   * @return the random instruction.
+   */
   def random(position: Int): Instruction =
     val rng = ThreadLocalRandom.current()
 

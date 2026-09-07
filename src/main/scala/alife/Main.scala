@@ -360,7 +360,7 @@ object Main:
         statMaxDistance.setValue(actionStatistics.maxTravelDistance.toString)
         statMaxLifeSpan.setValue(actionStatistics.maxLife.toString)
       
-      if autoPause > 0 && generation > 0 && generation % autoPause == 0 then 
+      if autoPause > 0 && generation > 0 && generation % autoPause == 0 then
         SwingEx.invokeAndWait:
           executePause(true)
       
