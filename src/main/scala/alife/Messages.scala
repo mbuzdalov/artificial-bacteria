@@ -1,6 +1,6 @@
 package alife
 
-trait Messages {
+trait Messages:
   def title: String
   def pause: String
   def resume: String
@@ -49,12 +49,11 @@ trait Messages {
   def highlightLongest: String
   def highlightMaxChildren: String
   def highlightFastest: String
-}
 
-object Messages {
+object Messages:
   def apply(lang: String): Messages = if (lang == "ru") Russian else English
 
-  private object English extends Messages {
+  private object English extends Messages:
     def title: String = "Artificial Bacteria"
     def pause: String = "PAUSE"
     def resume: String = "RESUME"
@@ -103,9 +102,8 @@ object Messages {
     def highlightLongest: String = "The longest genome"
     def highlightMaxChildren: String = "Max number of children"
     def highlightFastest: String = "The fastest bacterium"
-  }
 
-  private object Russian extends Messages {
+  private object Russian extends Messages:
     def title: String = "Бактерии"
     def pause: String = "ПАУЗА"
     def resume: String = "ПРОДОЛЖИТЬ"
@@ -154,5 +152,3 @@ object Messages {
     def highlightLongest: String = "Найти самый длинный геном"
     def highlightMaxChildren: String = "Максимальное число потомков"
     def highlightFastest: String = "Самая быстрая бактерия"
-  }
-}
