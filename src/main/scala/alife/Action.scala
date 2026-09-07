@@ -6,7 +6,6 @@ import alife.Field.Constants
  * A trait for all actions.
  */
 sealed trait Action:
-  protected def requiredEnergy(field: Field, x: Int, y: Int, constants: Constants): Double
   def canApply(field: Field, x: Int, y: Int, constants: Constants): Boolean
   def apply(field: Field, x: Int, y: Int, constants: Constants): Unit
   def index: Int
@@ -19,7 +18,7 @@ object Action:
   all.indices.foreach(i => assert(all(i).index == i))
 
   abstract class Rotate(rotation: Int, val index: Int) extends Action:
-    override protected def requiredEnergy(field: Field, x: Int, y: Int, constants: Constants): Double =
+    private def requiredEnergy(field: Field, x: Int, y: Int, constants: Constants): Double =
       constants.rotationCost * (field.getHealth(x, y) + field.getWeight(x, y))
     
     override def canApply(field: Field, x: Int, y: Int, constants: Constants): Boolean = true
@@ -34,7 +33,7 @@ object Action:
 
   case object Move extends Action:
     override def index: Int = 3
-    override protected def requiredEnergy(field: Field, x: Int, y: Int, constants: Constants): Double =
+    private def requiredEnergy(field: Field, x: Int, y: Int, constants: Constants): Double =
       constants.moveCost * (field.getHealth(x, y) + field.getWeight(x, y) + field.getDebris(x, y))
     override def canApply(field: Field, x: Int, y: Int, constants: Constants): Boolean =
       field.getHealthRelative(x, y, Field.relativeLocationForward) == 0
@@ -50,7 +49,7 @@ object Action:
 
   case object Eat extends Action:
     override def index: Int = 4
-    override protected def requiredEnergy(field: Field, x: Int, y: Int, constants: Constants): Double = 0.0
+    private def requiredEnergy(field: Field, x: Int, y: Int, constants: Constants): Double = 0.0
     override def canApply(field: Field, x: Int, y: Int, constants: Constants): Boolean = true
     override def apply(field: Field, x: Int, y: Int, constants: Constants): Unit =
       assert(canApply(field, x, y, constants))
@@ -61,7 +60,7 @@ object Action:
 
   case object Fork extends Action:
     override def index: Int = 0
-    override protected def requiredEnergy(field: Field, x: Int, y: Int, constants: Constants): Double =
+    private def requiredEnergy(field: Field, x: Int, y: Int, constants: Constants): Double =
       constants.forkCost * field.getWeight(x, y)
     override def canApply(field: Field, x: Int, y: Int, constants: Constants): Boolean =
       field.getHealthRelative(x, y, Field.relativeLocationForward) == 0
