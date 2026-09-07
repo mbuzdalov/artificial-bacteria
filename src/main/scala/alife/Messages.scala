@@ -17,12 +17,13 @@ trait Messages:
   def statsTimePassed: String
   def statsCountMonsters: String
   def statsAvgHealth: String
+  def statsAvgGenome: String
   def statsFood: String
 
   def best: String
   def bestLifeSpan: String
   def bestHealth: String
-  def bestGenomeSize: String
+  def maxGenomeSize: String
   def bestChildren: String
   def bestDistance: String
   def bestSpeed: String
@@ -70,12 +71,13 @@ object Messages:
     def statsTimePassed: String = "Time passed: "
     def statsCountMonsters: String = "Of which monsters: "
     def statsAvgHealth: String = "Average health: "
+    def statsAvgGenome: String = "Average genome size: "
     def statsFood: String = "Amount of food: "
 
     def best: String = "The best ones:"
     def bestLifeSpan: String = "Max life span: "
     def bestHealth: String = "Max health: "
-    def bestGenomeSize: String = "Max genome size: "
+    def maxGenomeSize: String = "Max genome size: "
     def bestChildren: String = "Max no of children: "
     def bestDistance: String = "The longest path: "
     def bestSpeed: String = "The highest speed: "
@@ -120,12 +122,13 @@ object Messages:
     def statsTimePassed: String = "Время: "
     def statsCountMonsters: String = "Из них потомков монстров: "
     def statsAvgHealth: String = "Среднее здоровье: "
+    def statsAvgGenome: String = "Средний размер генома: "
     def statsFood: String = "Количество еды: "
 
     def best: String = "Самые-самые: "
     def bestLifeSpan: String = "Максимальный срок жизни: "
     def bestHealth: String = "Максимальное здоровье: "
-    def bestGenomeSize: String = "Максимальный размер генома: "
+    def maxGenomeSize: String = "Максимальный размер генома: "
     def bestChildren: String = "Максимальное число детей: "
     def bestDistance: String = "Самый длинный путь: "
     def bestSpeed: String = "Самая большая скорость: "

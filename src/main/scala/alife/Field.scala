@@ -19,9 +19,11 @@ class Field(val width: Int, val height: Int):
   private val sumDistancesL, sumDistancesR = Array.ofDim[Int](height)
 
   private var maxGenomeSize = 0
+  private var sumGenomeSizes = 0L
   private var numberOfBacteria = 0
 
   def getMaxGenomeSize: Int = maxGenomeSize
+  def getAverageGenomeSize: Double = if numberOfBacteria == 0 then 0.0 else sumGenomeSizes.toDouble / numberOfBacteria
   def getNumberOfBacteria: Int = numberOfBacteria
 
   def getEnergy(x: Int, y: Int): Double = energy.checked(x, y)
@@ -121,6 +123,7 @@ class Field(val width: Int, val height: Int):
     var sumEnergies = 0.0
     var maxEnergy = 0.0
     maxGenomeSize = 0
+    sumGenomeSizes = 0
     var nMonsters = 0
 
     var maxLifeSpan = 0
@@ -158,6 +161,7 @@ class Field(val width: Int, val height: Int):
           if ind != null then
             if ind.label < 0 then nMonsters += 1
             maxGenomeSize = math.max(maxGenomeSize, ind.genome.size)
+            sumGenomeSizes += ind.genome.size
             maxLifeSpan = math.max(maxLifeSpan, ind.lifeSpan)
             maxChildren = math.max(maxChildren, ind.numberOfChildren)
             maxDistance = math.max(maxDistance, ind.travelDistance)
