@@ -109,6 +109,7 @@ object Main:
       synthesisDecay = properties.getProperty("synthesisDecay").toDouble,
       idleCost = properties.getProperty("idleCost").toDouble,
       healthMultiple = properties.getProperty("healthMultiple").toDouble,
+      healthIncrementMultiple = properties.getProperty("healthIncrementMultiple").toDouble,
       spotPeriodX = properties.getProperty("spotPeriodX").toDouble,
       spotPeriodY = properties.getProperty("spotPeriodY").toDouble,
       spotSpeedX = properties.getProperty("spotSpeedX").toDouble,

@@ -54,7 +54,11 @@ object Action:
     override def apply(field: Field, x: Int, y: Int, constants: Constants): Unit =
       assert(canApply(field, x, y, constants))
       val w = field.getWeight(x, y)
-      val eatAmount = math.max(0, math.min(math.min(field.getEnergy(x, y), w), w * constants.healthMultiple - field.getEnergy(x, y)))
+      // how much can we eat before hitting our global limit
+      val intakeLimitGlobal = w * constants.healthMultiple - field.getHealth(x, y)
+      // how much can we eat technically: min of current food and of the max increment
+      val intakeLimitLocal = math.min(w * constants.healthIncrementMultiple, field.getEnergy(x, y))
+      val eatAmount = math.max(0, math.min(intakeLimitGlobal, intakeLimitLocal))
       field.setEnergy(x, y, field.getEnergy(x, y) - eatAmount)
       field.setIndividual(x, y, field.getIndividual(x, y), field.getDirection(x, y), field.getHealth(x, y) + eatAmount * (1 - constants.eatCost))
 

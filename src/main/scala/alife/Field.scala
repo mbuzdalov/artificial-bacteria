@@ -229,6 +229,6 @@ object Field:
   case class Constants(rotationCost: Double, moveCost: Double, eatCost: Double, forkCost: Double,
                        debrisDegradation: Double, debrisToEnergy: Double,
                        synthesisInit: Double, synthesisFinal: Double, synthesisDecay: Double,
-                       idleCost: Double, healthMultiple: Double,
+                       idleCost: Double, healthMultiple: Double, healthIncrementMultiple: Double,
                        spotPeriodX: Double, spotSpeedX: Double, spotPeriodY: Double, spotSpeedY: Double,
                        spotDecay: Double)
