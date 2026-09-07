@@ -74,7 +74,7 @@ object Main:
       next.apply(field, stats)
       drainClickQueue(queue, field, stats)
 
-  private def makeMonster(): Individual = Individual(Monsters.First, -1)
+  private def makeMonster(): Individual = Individual(Monsters.TheChosenOne, -1)
 
   private def initializeFieldRandomly(field: Field, initialBacteriaProbability: Double,
                                       initialGenomeLength: Int, initialHealth: Double): Unit =
