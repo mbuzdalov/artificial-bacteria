@@ -116,6 +116,9 @@ object Main:
       spotSpeedX = properties.getProperty("spotSpeedX").toDouble,
       spotSpeedY = properties.getProperty("spotSpeedY").toDouble,
       spotDecay = properties.getProperty("spotDecay").toDouble,
+      mutationOperator = properties.getProperty("mutationOperator") match
+        case "primitive" => Operators.mutatePrimitive
+        case "smooth" => Operators.mutateSmooth
     )
 
     val useSound = properties.getProperty("sound").toBoolean

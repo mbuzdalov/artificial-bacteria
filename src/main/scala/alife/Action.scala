@@ -138,7 +138,7 @@ object Action:
       val h = field.getHealth(x, y) - e
       val d = field.getDirection(x, y)
       if h / 2 > 0 then
-        field.setIndividual(x, y, Operators.mutate(g), d, h / 2)
+        field.setIndividual(x, y, constants.mutationOperator(g), d, h / 2)
         Move.apply(field, x, y, constants)
       field.setIndividual(x, y, g, d, h / 2)
       field.setDebris(x, y, field.getDebris(x, y) + e * constants.debrisFromActions)

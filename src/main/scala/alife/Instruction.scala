@@ -168,3 +168,27 @@ object Instruction:
       case 13 => Divide(nextPos(), nextPos())
       case 14 => Sigmoid(nextPos(), nextPos())
       case _ => throw new AssertionError()
+  
+  /**
+   * Maps all argument indices in the supplied instruction using the provided mapping function.
+   * @param mapper the mapping function to change argument indices.
+   * @param instruction the instruction to modify.
+   * @return the modified instruction.
+   */
+  def mapArguments(mapper: Int => Int)(instruction: Instruction): Instruction = instruction match
+    case i: Const => i
+    case MyWeight => MyWeight
+    case MyHealth => MyHealth
+    case i: EnergyAt => i
+    case i: DebrisAt => i
+    case i: HealthAt => i
+    case Sin(a) => Sin(mapper(a))
+    case Cos(a) => Cos(mapper(a))
+    case Exp(a) => Exp(mapper(a))
+    case Log(a) => Log(mapper(a))
+    case Plus(a1, a2) => Plus(mapper(a1), mapper(a2))
+    case Minus(a1, a2) => Minus(mapper(a1), mapper(a2))
+    case Times(a1, a2) => Times(mapper(a1), mapper(a2))
+    case Divide(a1, a2) => Divide(mapper(a1), mapper(a2))
+    case Sigmoid(a1, a2) => Sigmoid(mapper(a1), mapper(a2))
+    

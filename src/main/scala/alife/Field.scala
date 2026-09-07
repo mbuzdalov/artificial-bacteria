@@ -233,4 +233,4 @@ object Field:
                        synthesisInit: Double, synthesisFinal: Double, synthesisDecay: Double,
                        idleCost: Double, healthMultiple: Double, healthIncrementMultiple: Double,
                        spotPeriodX: Double, spotSpeedX: Double, spotPeriodY: Double, spotSpeedY: Double,
-                       spotDecay: Double)
+                       spotDecay: Double, mutationOperator: Individual => Individual)
