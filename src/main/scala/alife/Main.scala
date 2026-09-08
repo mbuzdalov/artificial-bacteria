@@ -1,12 +1,14 @@
 package alife
 
+import alife.Action.{Fork, Move, Eat, RotatePlus, RotateMinus}
+
 import java.awt.event.{ActionEvent, MouseAdapter, MouseEvent}
 import java.awt.image.BufferedImage
 import java.awt.*
 import java.io.FileReader
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{LinkedBlockingDeque, ThreadLocalRandom}
-import java.util.{Locale, Properties}
+import java.util.{Locale, Properties, StringTokenizer}
 import javax.swing.*
 import scala.annotation.tailrec
 import alife.sound.{DefaultSynthesizer, SoundWriterJob}
@@ -70,8 +72,6 @@ object Main:
       next.apply(field, stats)
       drainClickQueue(queue, field, stats)
 
-  private def makeMonster(): Individual = Individual(Monsters.TheChosenOne, -1)
-
   private def initializeFieldRandomly(field: Field, initialBacteriaProbability: Double,
                                       initialGenomeLength: Int, initialHealth: Double): Unit =
     Loops.foreach(0, field.height): y =>
@@ -92,6 +92,30 @@ object Main:
 
     val msg = Messages(properties.getProperty("language"))
 
+    val globallyEnabledActions = Map(
+      "Fork" -> Fork,
+      "Move" -> Move,
+      "Eat" -> Eat,
+      "RotatePlus" -> RotatePlus,
+      "RotateMinus" -> RotateMinus,
+    )
+    
+    val actionSequenceSource = StringTokenizer(properties.getProperty("actionSequence"), " ,")
+    val actionSequence = IArray.fill[alife.Action](actionSequenceSource.countTokens()):
+      val tok = actionSequenceSource.nextToken()
+      globallyEnabledActions.getOrElse(tok, throw new IllegalArgumentException(
+        s"For 'actionSequence', unknown action '$tok': expected one of ${globallyEnabledActions.keys.map(v => s"'$v'").mkString(", ")}"
+      ))
+    if actionSequence.distinct.size != actionSequence.size then
+      throw new IllegalArgumentException("Repeated elements in 'actionSequence'")
+    
+    val compatibleMonster = Monsters.chooseFor(actionSequence)
+    
+    val mutationOperator = properties.getProperty("mutationOperator") match
+      case "primitive" => Operators.mutatePrimitive
+      case "smooth" => Operators.mutateSmooth
+      case other => throw new IllegalArgumentException(s"Unknown value for 'mutationOperator': '$other' (expected one of: 'primitive', 'smooth')")
+    
     val constants = Field.Constants(
       rotationCost = properties.getProperty("rotationCost").toDouble,
       moveCost = properties.getProperty("moveCost").toDouble,
@@ -111,10 +135,8 @@ object Main:
       spotSpeedX = properties.getProperty("spotSpeedX").toDouble,
       spotSpeedY = properties.getProperty("spotSpeedY").toDouble,
       spotDecay = properties.getProperty("spotDecay").toDouble,
-      mutationOperator = properties.getProperty("mutationOperator") match
-        case "primitive" => Operators.mutatePrimitive
-        case "smooth" => Operators.mutateSmooth
-        case other => throw new IllegalArgumentException(s"Unknown value for 'mutationOperator': '$other' (expected one of: 'primitive', 'smooth')")
+      mutationOperator = mutationOperator,
+      actions = actionSequence
     )
 
     val useSound = properties.getProperty("sound").toBoolean
@@ -206,6 +228,8 @@ object Main:
     val mouseLargeDestroy = brush(fontSize, JToggleButton(msg.mouseClickNukeLarge))
     val mouseDumpGenome = brush(fontSize, JToggleButton(msg.mouseClickPrintGenome))
     val mousePutMonster = brush(fontSize, JToggleButton(msg.mouseClickAddMonster))
+    
+    mousePutMonster.setEnabled(compatibleMonster.nonEmpty)
 
     val clickCommands = LinkedBlockingDeque[(Field, Field.StepStatistics) => Unit]()
     val mouseClickGroup = ButtonGroup()
@@ -311,7 +335,10 @@ object Main:
         if mouseSmallDestroy.isSelected then clickCommands.addLast((e, _) => e.eraseEverything(x, y, smallRadius))
         if mouseLargeDestroy.isSelected then clickCommands.addLast((e, _) => e.eraseEverything(x, y, largeRadius))
         if mouseDumpGenome.isSelected then findAndDumpIndividual(field, x, y, 0)
-        if mousePutMonster.isSelected then clickCommands.addLast((e, _) => e.getCell(x, y).setIndividual(makeMonster(), ThreadLocalRandom.current().nextInt(4), initialHealth))
+        if mousePutMonster.isSelected then clickCommands.addLast: (e, _) =>
+          val cell = e.getCell(x, y)
+          val monster = Individual(compatibleMonster.get, -1)
+          cell.setIndividual(monster, ThreadLocalRandom.current().nextInt(4), initialHealth)
     })
 
     val window = JFrame(msg.title)

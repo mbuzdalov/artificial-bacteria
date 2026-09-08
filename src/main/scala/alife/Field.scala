@@ -51,7 +51,8 @@ class Field(val width: Int, val height: Int):
           cell.setIndividual(null, 0, 0)
   
   private def performActionsOnIndividuals(constants: Field.Constants): Array[Int] =
-    val actionCount = Array.ofDim[Int](Action.all.size)
+    val actions = constants.actions
+    val actionCount = Array.ofDim[Int](actions.size)
     
     Loops.foreach(0, height): y =>
       Loops.foreach(0, width): x =>
@@ -69,13 +70,13 @@ class Field(val width: Int, val height: Int):
           // order:   most recent   2nd most recent  3rd most recent  ...
           
           var chosenAction = -1
-          Loops.foreach(0, math.min(g.size, Action.all.size)): i =>
-            if Action.all(i).canApply(this, x, y, constants) then
+          Loops.foreach(0, math.min(g.size, actions.size)): i =>
+            if actions(i).canApply(this, x, y, constants) then
               if chosenAction == -1 || callStack(i + 1) > callStack(chosenAction + 1) then
                 chosenAction = i
           
           if chosenAction != -1 then
-            val theAction = Action.all(chosenAction)
+            val theAction = actions(chosenAction)
             ind.recordAction(theAction)
             theAction.apply(this, x, y, constants)
             actionCount(chosenAction) += 1
@@ -122,7 +123,7 @@ class Field(val width: Int, val height: Int):
         cell.setDebris(cell.debris * debrisTotalDecay)
         cell.setFood(cell.food + d2e + newFood)
   
-  private def computeStatistics(actionCount: Array[Int]): Field.StepStatistics =
+  private def computeStatistics(constants: Field.Constants, actionCount: Array[Int]): Field.StepStatistics =
     var maxHealth = 0.0
     var sumHealths = 0.0
     var totalFood = 0.0
@@ -163,11 +164,12 @@ class Field(val width: Int, val height: Int):
       maximalHealth = maxHealth,
       totalFood = totalFood,
       maxFood = maxFood,
-      nEats = actionCount(Action.Eat.index),
-      nForks = actionCount(Action.Fork.index),
-      nMoves = actionCount(Action.Move.index),
-      nClockwise = actionCount(Action.RotateMinus.index),
-      nCounterClockwise = actionCount(Action.RotatePlus.index),
+      // the following selectors are not efficient, but this action is by far not a bottleneck
+      nEats = actionCount(constants.actions.indexOf(Action.Eat)),
+      nForks = actionCount(constants.actions.indexOf(Action.Fork)),
+      nMoves = actionCount(constants.actions.indexOf(Action.Move)),
+      nClockwise = actionCount(constants.actions.indexOf(Action.RotatePlus)),
+      nCounterClockwise = actionCount(constants.actions.indexOf(Action.RotateMinus)),
       maxLife = maxLifeSpan,
       maxChildren = maxChildren,
       maxTravelDistance = maxDistance,
@@ -179,7 +181,7 @@ class Field(val width: Int, val height: Int):
     val actionCount = performActionsOnIndividuals(constants)
     drainIdleEnergy(constants)
     depositFoodAndConvertDebris(constants, stepNumber)
-    computeStatistics(actionCount)
+    computeStatistics(constants, actionCount)
 
   def findAndMarkLongestGenome(label: Int): Unit = labelMaxIndividual(_.genome.size, 0, label)
   def findAndMarkMostProductive(label: Int): Unit = labelMaxIndividual(_.numberOfChildren, 0, label)
@@ -250,4 +252,5 @@ object Field:
                        synthesisInit: Double, synthesisFinal: Double, synthesisDecay: Double,
                        idleCost: Double, healthMultiple: Double, healthIncrementMultiple: Double,
                        spotPeriodX: Double, spotSpeedX: Double, spotPeriodY: Double, spotSpeedY: Double,
-                       spotDecay: Double, mutationOperator: Individual => Individual)
+                       spotDecay: Double, mutationOperator: Individual => Individual,
+                       actions: IArray[Action])

@@ -26,30 +26,16 @@ sealed trait Action:
    * @param constants the constants that define how simulation works.
    */
   def apply(field: Field, x: Int, y: Int, constants: Constants): Unit
-  
-  /**
-   * Returns the 0-based index of this action in the `Action.all(...)` array for performance reasons.
-   * In other words, `Action.all(this.index) == this`.
-   * @return the index.
-   */
-  def index: Int
 
 /**
  * All the available actions.
  */
 object Action:
   /**
-   * All supported actions, pre-created and indexable.
-   */
-  final val all: IArray[Action] = IArray(Fork, RotateMinus, RotatePlus, Move, Eat)
-  all.indices.foreach(i => assert(all(i).index == i))
-  
-  /**
    * Rotates the individual by the amount of ticks clockwise given as `rotation`.
    * @param rotation the amount of rotation ticks to perform.
-   * @param index the index of the action.
    */
-  abstract class Rotate(rotation: Int, val index: Int) extends Action:
+  abstract class Rotate(rotation: Int) extends Action:
     override def canApply(field: Field, x: Int, y: Int, constants: Constants): Boolean = true
     override def apply(field: Field, x: Int, y: Int, constants: Constants): Unit =
       val cell = field.getCell(x, y)
@@ -63,7 +49,7 @@ object Action:
    * 2) The emergy required for this action is (bacterium's health + bacterium's weight) times `rotationCost`.
    * 3) This energy times `debrisFromActions` is deposited as debris.
    */
-  case object RotateMinus extends Rotate(-1, 1)
+  case object RotateMinus extends Rotate(-1)
   
   /**
    * The positive (clockwise) rotation:
@@ -71,7 +57,7 @@ object Action:
    * 2) The energy required for this action is (bacterium's health + bacterium's weight) times `rotationCost`.
    * 3) This energy times `debrisFromActions` is deposited as debris.
    */
-  case object RotatePlus  extends Rotate(+1, 2)
+  case object RotatePlus extends Rotate(+1)
   
   /**
    * The move one step forward in the frontal direction of the bacterium.:
@@ -80,7 +66,6 @@ object Action:
    * 3) This energy times `debrisFromActions` is deposited as debris.
    */
   case object Move extends Action:
-    override def index: Int = 3
     override def canApply(field: Field, x: Int, y: Int, constants: Constants): Boolean =
       field.getRelativeCell(x, y, Field.relativeLocationForward).health == 0
     override def apply(field: Field, x: Int, y: Int, constants: Constants): Unit =
@@ -105,7 +90,6 @@ object Action:
    * 4) This energy times `debrisFromActions` is deposited as debris.
    */
   case object Eat extends Action:
-    override def index: Int = 4
     override def canApply(field: Field, x: Int, y: Int, constants: Constants): Boolean = true
     override def apply(field: Field, x: Int, y: Int, constants: Constants): Unit =
       val cell = field.getCell(x, y)
@@ -128,7 +112,6 @@ object Action:
    * 5) The new bacteria additionally incurs all move costs (from the current to the target cell).
    */
   case object Fork extends Action:
-    override def index: Int = 0
     override def canApply(field: Field, x: Int, y: Int, constants: Constants): Boolean =
       Move.canApply(field, x, y, constants)
     override def apply(field: Field, x: Int, y: Int, constants: Constants): Unit =
