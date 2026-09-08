@@ -7,10 +7,8 @@ import alife.util.Loops
  * This is the current default sound synthesis implementation,
  * which assigns the frequency to the vertical coordinate and generates sound at this frequency.
  *
- * Their strength and panoramic position depends on the distribution
- * of bacteria (and their healths) at this vertical coordinate.
- * This creates a sound which is panned according to the density of bacteria
- * health on the field.
+ * Their strength and panoramic position depends on the distribution of bacteria at this vertical coordinate.
+ * This creates a sound which is panned according to the density of bacteria presence on the field.
  *
  * This implementation has the runtime per frame that is proportional to the field's height,
  * so the performance is reasonable.
