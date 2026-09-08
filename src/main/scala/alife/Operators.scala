@@ -56,12 +56,16 @@ object Operators:
         if genome.isEmpty then genome else
           val (h, t) = genome.splitAt(rng.nextInt(genome.size))
           val newTail = t.tail.zipWithIndex.map: (v, i) =>
-            Instruction.mapArguments(a => if a >= i then a - 1 else a)(v)
+            // indices `i` and below should stay (`index` == `i` points to element following the deletion)
+            // indices above `i + 1` need a -1, index `i + 1` was deleted (-1 is safe)
+            Instruction.mapArguments(a => if a > i then a - 1 else a)(v)
           h ++ newTail
       case 2 =>
         val (h, t) = genome.splitAt(rng.nextInt(1 + genome.size))
         val newTail = t.zipWithIndex.map: (v, i) =>
-          Instruction.mapArguments(a => if a >= i then a + 1 else a)(v)
+          // indices `i` and below should stay (`index` == `i` points to element following the insertion)
+          // indices above `i + 1` need a +1
+          Instruction.mapArguments(a => if a > i then a + 1 else a)(v)
         (h :+ Instruction.random(h.size)) ++ newTail
       case _ => throw new AssertionError()
     individual.copy(genome = newGenome)
