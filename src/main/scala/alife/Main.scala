@@ -54,17 +54,13 @@ object Main:
 
   @tailrec
   private def findAndDumpIndividual(field: Field, x: Int, y: Int, d: Int): Unit =
-    if (d == 11) {
-      println("No bacterium nearby")
-    } else {
+    if d == 11 then println("No bacterium nearby") else
       (-d to d).view.flatMap(dx => Seq(
         Option(field.getCellChecked(x + dx, y + d - math.abs(dx)).individual),
         Option(field.getCellChecked(x + dx, y - d + math.abs(dx)).individual),
-      ).flatten).headOption match {
+      ).flatten).headOption match
         case Some(g) => println(g.genome.mkString("IArray(", ", ", ")"))
         case None => findAndDumpIndividual(field, x, y, d + 1)
-      }
-    }
 
   @tailrec
   private def drainClickQueue(queue: LinkedBlockingDeque[(Field, Field.StepStatistics) => Unit],
@@ -83,7 +79,7 @@ object Main:
         val cell = field.getCell(x, y)
         cell.setDebris(0)
         cell.setFood(1e-9)
-        if ThreadLocalRandom.current().nextDouble() < initialBacteriaProbability 
+        if ThreadLocalRandom.current().nextDouble() < initialBacteriaProbability
         then cell.setIndividual(Individual(IArray.tabulate(initialGenomeLength)(Instruction.random), 0),
                                 ThreadLocalRandom.current().nextInt(4),
                                 initialHealth)
