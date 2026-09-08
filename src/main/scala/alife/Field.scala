@@ -1,15 +1,14 @@
 package alife
 
-import alife.util.Loops
+import alife.util.{Loops, PseudoStack}
 
-import java.util.Arrays as JArrays
 import java.util.concurrent.ThreadLocalRandom
 
 /**
  * A class for a field where bacteria live.
  */
 class Field(val width: Int, val height: Int):
-  import alife.Field.{Constants, DataAccess}
+  import alife.Field.Constants
 
   private val energy = Field.Matrix[Double](width, height)
   private val debris = Field.Matrix[Double](width, height)
@@ -18,13 +17,8 @@ class Field(val width: Int, val height: Int):
   private val direction = Field.Matrix[Int](width, height)
   private val sumDistancesL, sumDistancesR = Array.ofDim[Int](height)
 
-  private var maxGenomeSize = 0
-  private var sumGenomeSizes = 0L
   private var numberOfBacteria = 0
-
-  def getMaxGenomeSize: Int = maxGenomeSize
-  def getAverageGenomeSize: Double = if numberOfBacteria == 0 then 0.0 else sumGenomeSizes.toDouble / numberOfBacteria
-  def getNumberOfBacteria: Int = numberOfBacteria
+  private val callStack = PseudoStack()
 
   def getEnergy(x: Int, y: Int): Double = energy.checked(x, y)
   def getDebris(x: Int, y: Int): Double = debris.checked(x, y)
@@ -54,7 +48,6 @@ class Field(val width: Int, val height: Int):
       individual(xm, ym) = g
       direction(xm, ym) = d
       numberOfBacteria += 1
-      maxGenomeSize = math.max(maxGenomeSize, g.genome.size)
       health(xm, ym) = h
       sumDistancesL(ym) += xm
       sumDistancesR(ym) += width - 1 - xm
@@ -90,51 +83,50 @@ class Field(val width: Int, val height: Int):
   final def setIndividualRelative(x: Int, y: Int, relativeLocation: Int, g: Individual, d: Int, h: Double): Unit =
     atRelative(x, y, relativeLocation, (i, j) => { setIndividual(i, j, g, d, h); 0.0 })
 
-  def simulationStep(constants: Constants, stepNumber: Int): Field.StepStatistics = {
+  private def performActionsOnIndividuals(constants: Constants): Array[Int] =
     val actionCount = Array.ofDim[Int](Action.all.size)
-    var da = DataAccess(Array.ofDim((maxGenomeSize + 5) * 2))
-
+    
     Loops.foreach(0, height): y =>
       Loops.foreach(0, width): x =>
         val ind = individual(x, y)
         if ind != null then
           val g = ind.genome
-          if da.array.length < maxGenomeSize then da = DataAccess(Array.ofDim(maxGenomeSize * 2))
-          da.clear()
+          callStack.clear()
           Loops.foreach(0, g.size): i =>
-            da.array(i) = g(i).apply(this, x, y, da)
-            da.offset += 1
+            callStack.push(g(i).apply(this, x, y, callStack))
+            
+          // Outputs are organized as follows:
+          // action:            0             1                2      ...
+          // output:  callStack(1)  callStack(2)     callStack(3)     ...
+          // order:   most recent   2nd most recent  3rd most recent  ...
+          
           var chosenAction = -1
           Loops.foreach(0, math.min(g.size, Action.all.size)): i =>
             if Action.all(i).canApply(this, x, y, constants) then
-              // In `da(i)`, `i` is the offset backwards, so we have to add 1 to get the i-th element from the end,
-              // which is what we want from action.
-              if chosenAction == -1 || da(i + 1) > da(chosenAction + 1) then
+              if chosenAction == -1 || callStack(i + 1) > callStack(chosenAction + 1) then
                 chosenAction = i
-
+          
           if chosenAction != -1 then
             val theAction = Action.all(chosenAction)
             ind.recordAction(theAction)
             theAction.apply(this, x, y, constants)
             actionCount(chosenAction) += 1
 
-    var maxHealth = 0.0
-    var sumHealths = 0.0
-    var sumEnergies = 0.0
-    var maxEnergy = 0.0
-    maxGenomeSize = 0
-    sumGenomeSizes = 0
-    var nMonsters = 0
+    actionCount
+  
+  private def drainIdleEnergy(constants: Constants): Unit =
+    Loops.foreach(0, height): y =>
+      Loops.foreach(0, width): x =>
+        if individual(x, y) != null then
+          val spentForLiving = math.min(constants.idleCost, health(x, y))
+          debris(x, y) += spentForLiving * constants.debrisFromActions
+          setIndividual(x, y, individual(x, y), direction(x, y), health(x, y) - constants.idleCost)
 
-    var maxLifeSpan = 0
-    var maxChildren = 0
-    var maxDistance = 0
-    var maxSpeed = 0.0
-
+  private def depositFoodAndConvertDebris(constants: Constants, stepNumber: Int): Unit =
     val synthDecay = math.exp(-stepNumber * constants.synthesisDecay) // initially 1, then decreases to 0
-    val sineDecay = math.exp(-stepNumber * constants.spotDecay)       // initially 1, then decreases to 0
+    val sineDecay = math.exp(-stepNumber * constants.spotDecay) // initially 1, then decreases to 0
     val synthesisBase = 2 * (synthDecay * constants.synthesisInit + (1 - synthDecay) * constants.synthesisFinal)
-
+    
     val spotXOffset = 2 * math.Pi * stepNumber * constants.spotSpeedX
     val spotYOffset = 2 * math.Pi * stepNumber * constants.spotSpeedY
     val spotXScale = math.Pi * constants.spotPeriodX / width
@@ -144,31 +136,51 @@ class Field(val width: Int, val height: Int):
       val sinY = math.sin(y * spotYScale + spotYOffset)
       Loops.foreach(0, width): x =>
         val cosX = math.cos(x * spotXScale + spotXOffset)
-        val synthesis = synthesisBase * ((1 - sineDecay) * cosX * cosX * sinY * sinY + sineDecay)
-
-        energy(x, y) += debris(x, y) * constants.debrisToEnergy
+        val newFoodScale = synthesisBase * ((1 - sineDecay) * cosX * cosX * sinY * sinY + sineDecay)
+        val newFood = newFoodScale * ThreadLocalRandom.current().nextDouble()
+        val d2e = debris(x, y) * constants.debrisToEnergy
         debris(x, y) *= 1 - constants.debrisDegradation - constants.debrisToEnergy
-        energy(x, y) += ThreadLocalRandom.current().nextDouble() * synthesis
+        energy(x, y) += d2e + newFood
+  
+  private def computeStatistics(actionCount: Array[Int]): Field.StepStatistics =
+    var maxHealth = 0.0
+    var sumHealths = 0.0
+    var sumEnergies = 0.0
+    var maxEnergy = 0.0
+    var maxGenomeSize = 0
+    var sumGenomeSizes = 0L
+    var nMonsters = 0
+    var nBacteria = 0
+    
+    var maxLifeSpan = 0
+    var maxChildren = 0
+    var maxDistance = 0
+    var maxSpeed = 0.0
+    
+    Loops.foreach(0, height): y =>
+      Loops.foreach(0, width): x =>
         sumEnergies += energy(x, y)
         maxEnergy = math.max(maxEnergy, energy(x, y))
-        if individual(x, y) != null then
-          val spentForLiving = math.min(constants.idleCost, health(x, y))
-          debris(x, y) += spentForLiving * constants.debrisFromActions
-          setIndividual(x, y, individual(x, y), direction(x, y), health(x, y) - constants.idleCost)
+        val ind = individual(x, y)
+        if ind != null then
+          nBacteria += 1
           sumHealths += health(x, y)
           maxHealth = math.max(maxHealth, health(x, y))
-          val ind = individual(x, y)
-          if ind != null then
-            if ind.label < 0 then nMonsters += 1
-            maxGenomeSize = math.max(maxGenomeSize, ind.genome.size)
-            sumGenomeSizes += ind.genome.size
-            maxLifeSpan = math.max(maxLifeSpan, ind.lifeSpan)
-            maxChildren = math.max(maxChildren, ind.numberOfChildren)
-            maxDistance = math.max(maxDistance, ind.travelDistance)
-            maxSpeed = math.max(maxSpeed, ind.averageSpeed)
-
+          if ind.label < 0 then nMonsters += 1
+          maxGenomeSize = math.max(maxGenomeSize, ind.genome.size)
+          sumGenomeSizes += ind.genome.size
+          maxLifeSpan = math.max(maxLifeSpan, ind.lifeSpan)
+          maxChildren = math.max(maxChildren, ind.numberOfChildren)
+          maxDistance = math.max(maxDistance, ind.travelDistance)
+          maxSpeed = math.max(maxSpeed, ind.averageSpeed)
+    
+    assert(nBacteria == numberOfBacteria)
+    
     Field.StepStatistics(
-      averageHealth = sumHealths / math.max(1, getNumberOfBacteria),
+      maxGenomeSize = maxGenomeSize,
+      averageGenomeSize = sumGenomeSizes.toDouble / math.max(1, nBacteria),
+      numberOfBacteria = nBacteria,
+      averageHealth = sumHealths / math.max(1, nBacteria),
       maximalHealth = maxHealth,
       totalEnergy = sumEnergies,
       maxEnergy = maxEnergy,
@@ -183,7 +195,12 @@ class Field(val width: Int, val height: Int):
       maxSpeed = maxSpeed,
       nMonsters = nMonsters,
     )
-  }
+  
+  def simulationStep(constants: Constants, stepNumber: Int): Field.StepStatistics =
+    val actionCount = performActionsOnIndividuals(constants)
+    drainIdleEnergy(constants)
+    depositFoodAndConvertDebris(constants, stepNumber)
+    computeStatistics(actionCount)
 
   def findAndMarkLongestGenome(label: Int): Unit = labelMaxIndividual(_.genome.size, 0, label)
   def findAndMarkMostProductive(label: Int): Unit = labelMaxIndividual(_.numberOfChildren, 0, label)
@@ -210,15 +227,6 @@ object Field:
   val relativeLocationForward = 1
   val numberOfRelativeLocations: Int = relativeLocationsFW.length
 
-  private class DataAccess(val array: Array[Double]) extends (Int => Double):
-    var offset = 0
-    def apply(index: Int): Double =
-      val idx = offset - index
-      if (idx < 0 || index <= 0) 0.0 else array(idx)
-    def clear(): Unit =
-      offset = 0
-      JArrays.fill(array, 0.0)
-
   //noinspection ScalaUnusedSymbol this is for ClassTag, actually used in Array.ofDim.
   private class Matrix[@specialized(Double, Int) T : scala.reflect.ClassTag](width: Int, height: Int):
     private val data: Array[Array[T]] = Array.ofDim(height, width)
@@ -228,7 +236,8 @@ object Field:
     def setChecked(x: Int, y: Int, value: T): Unit = data(mod(y, height))(mod(x, width)) = value
     private inline def mod(i: Int, n: Int) = if (i >= 0 && i < n) i else (i % n + n) % n
 
-  case class StepStatistics(averageHealth: Double, maximalHealth: Double, totalEnergy: Double, maxEnergy: Double,
+  case class StepStatistics(maxGenomeSize: Int, averageGenomeSize: Double, numberOfBacteria: Int,
+                            averageHealth: Double, maximalHealth: Double, totalEnergy: Double, maxEnergy: Double,
                             nEats: Int, nForks: Int, nMoves: Int, nClockwise: Int, nCounterClockwise: Int,
                             maxLife: Int, maxChildren: Int, maxTravelDistance: Int, maxSpeed: Double, nMonsters: Int)
 

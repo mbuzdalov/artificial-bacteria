@@ -339,18 +339,19 @@ object Main:
         1
       else generation0 + 1
 
+      val t0 = System.nanoTime()
       val actionStatistics = field.simulationStep(constants, nextGenerationNo)
+      val t1 = System.nanoTime()
       view.fetchField()
+      val t2 = System.nanoTime()
 
-      val nBacteria = field.getNumberOfBacteria
-      val maxGenomeSize = field.getMaxGenomeSize
-      val avgGenomeSize = field.getAverageGenomeSize
-
+      println(f"$nextGenerationNo: simulation ${(t1 - t0) * 1e-9}%.03f s, view generation ${(t2 - t1) * 1e-9}%03f s")
+      
       drainClickQueue(clickCommands, field, actionStatistics)
       SwingEx.invokeLater:
         statTime.setValue(nextGenerationNo.toString)
-        statNBacteria.setValue(nBacteria.toString)
-        statMaxGenome.setValue(maxGenomeSize.toString)
+        statNBacteria.setValue(actionStatistics.numberOfBacteria.toString)
+        statMaxGenome.setValue(actionStatistics.maxGenomeSize.toString)
 
         actionsEat.setValue(actionStatistics.nEats.toString)
         actionsMove.setValue(actionStatistics.nMoves.toString)
@@ -360,7 +361,7 @@ object Main:
 
         statNMonsters.setValue(actionStatistics.nMonsters.toString)
         statAverageHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.averageHealth))
-        statAverageGenome.setValue(String.format(Locale.US, "%.2f", avgGenomeSize))
+        statAverageGenome.setValue(String.format(Locale.US, "%.2f", actionStatistics.averageGenomeSize))
         statMaxHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.maximalHealth))
         statSumEnergy.setValue(String.format(Locale.US, "%.2f", actionStatistics.totalEnergy))
         statMaxSpeed.setValue(String.format(Locale.US, "%.2f", actionStatistics.maxSpeed))
