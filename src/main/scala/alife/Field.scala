@@ -3,92 +3,60 @@ package alife
 import alife.util.{Loops, PseudoStack}
 
 import java.util.concurrent.ThreadLocalRandom
+import scala.compiletime.uninitialized
 
 /**
  * A class for a field where bacteria live.
  */
 class Field(val width: Int, val height: Int):
-  import alife.Field.Constants
-
-  private val energy = Field.Matrix[Double](width, height)
-  private val debris = Field.Matrix[Double](width, height)
-  private val health = Field.Matrix[Double](width, height)
-  private val individual = Field.Matrix[Individual](width, height)
-  private val direction = Field.Matrix[Int](width, height)
+  // cells stores the contents row first to align the access patterns with the screen buffers
+  private val cells = Array.tabulate(height, width)((y, x) => Field.Cell(x, y, this))
   private val sumDistancesL, sumDistancesR = Array.ofDim[Int](height)
-
-  private var numberOfBacteria = 0
   private val callStack = PseudoStack()
 
-  def getEnergy(x: Int, y: Int): Double = energy.checked(x, y)
-  def getDebris(x: Int, y: Int): Double = debris.checked(x, y)
-  def getHealth(x: Int, y: Int): Double = health.checked(x, y)
-  def getDirection(x: Int, y: Int): Int = direction.checked(x, y)
-  def getIndividual(x: Int, y: Int): Individual = individual.checked(x, y)
-  def getSumOfDistancesFromLeft(y: Int): Int = sumDistancesL(y)
-  def getSumOfDistancesFromRight(y: Int): Int = sumDistancesR(y)
-  def getWeight(x: Int, y: Int): Double =
-    val g = getIndividual(x, y)
-    if (g == null) 0 else g.genome.size
+  def getCell(x: Int, y: Int): Field.Cell = cells(y)(x)
 
-  def setEnergy(x: Int, y: Int, value: Double): Unit = energy.setChecked(x, y, value)
-  def setDebris(x: Int, y: Int, value: Double): Unit = debris.setChecked(x, y, value)
-  def setIndividual(x: Int, y: Int, g: Individual, d: Int, h: Double): Unit =
-    val xm = (width + x % width) % width
-    val ym = (height + y % height) % height
-    if individual(xm, ym) != null then
-      numberOfBacteria -= 1
-      sumDistancesL(ym) -= xm
-      sumDistancesR(ym) -= width - 1 - xm
-    if h < 0 || g == null then
-      individual(xm, ym) = null
-      direction(xm, ym) = 0
-      health(xm, ym) = 0
-    else
-      individual(xm, ym) = g
-      direction(xm, ym) = d
-      numberOfBacteria += 1
-      health(xm, ym) = h
-      sumDistancesL(ym) += xm
-      sumDistancesR(ym) += width - 1 - xm
-    end if
-
-  def increaseEnergy(x: Int, y: Int, radius: Int, amount: Double): Unit =
-    Loops.foreachInclusive(-radius, radius): xi =>
-      Loops.foreachInclusive(-radius, radius): yi =>
-        if xi * xi + yi * yi <= radius * radius then
-          val oldEnergy = getEnergy(x + xi, y + yi)
-          setEnergy(x + xi, y + yi, oldEnergy + (amount * 1.05 - oldEnergy) * 0.5)
-
-  def eraseEverything(x: Int, y: Int, radius: Int): Unit =
-    Loops.foreachInclusive(-radius, radius): xi =>
-      Loops.foreachInclusive(-radius, radius): yi =>
-        if xi * xi + yi * yi <= radius * radius then
-          setEnergy(x + xi, y + yi, 0)
-          setDebris(x + xi, y + yi, 0)
-          setIndividual(x + xi, y + yi, null, 0, 0)
+  def getCellChecked(x: Int, y: Int): Field.Cell =
+    val x0 = (x % width + width) % width
+    val y0 = (y % height + height) % height
+    getCell(x0, y0)
   
-  private inline def atRelative(x: Int, y: Int, relativeLocation: Int, inline fun: (Int, Int) => Double): Double =
-    val dirFW = direction.checked(x, y)
+  def getRelativeCell(x: Int, y: Int, relativeLocation: Int): Field.Cell =
+    val dirFW = cells(y)(x).direction
     val dirLF = (dirFW + 1) & 3
     val scaleFW = Field.relativeLocationsFW(relativeLocation)
     val scaleLF = Field.relativeLocationsLF(relativeLocation)
     val realX = x + Field.directionX(dirFW) * scaleFW + Field.directionX(dirLF) * scaleLF
     val realY = y + Field.directionY(dirFW) * scaleFW + Field.directionY(dirLF) * scaleLF
-    fun(realX, realY)
+    getCellChecked(realX, realY)
+  
+  def getSumOfDistancesFromLeft(y: Int): Int = sumDistancesL(y)
+  def getSumOfDistancesFromRight(y: Int): Int = sumDistancesR(y)
 
-  final def getEnergyRelative(x: Int, y: Int, relativeLocation: Int): Double = atRelative(x, y, relativeLocation, getEnergy)
-  final def getDebrisRelative(x: Int, y: Int, relativeLocation: Int): Double = atRelative(x, y, relativeLocation, getDebris)
-  final def getHealthRelative(x: Int, y: Int, relativeLocation: Int): Double = atRelative(x, y, relativeLocation, getHealth)
-  final def setIndividualRelative(x: Int, y: Int, relativeLocation: Int, g: Individual, d: Int, h: Double): Unit =
-    atRelative(x, y, relativeLocation, (i, j) => { setIndividual(i, j, g, d, h); 0.0 })
+  def increaseEnergy(x: Int, y: Int, radius: Int, amount: Double): Unit =
+    Loops.foreachInclusive(-radius, radius): xi =>
+      Loops.foreachInclusive(-radius, radius): yi =>
+        if xi * xi + yi * yi <= radius * radius then
+          val cell = getCellChecked(x + xi, y + yi)
+          val oldEnergy = cell.energy
+          cell.setEnergy(oldEnergy + (amount * 1.05 - oldEnergy) * 0.5)
 
-  private def performActionsOnIndividuals(constants: Constants): Array[Int] =
+  def eraseEverything(x: Int, y: Int, radius: Int): Unit =
+    Loops.foreachInclusive(-radius, radius): xi =>
+      Loops.foreachInclusive(-radius, radius): yi =>
+        if xi * xi + yi * yi <= radius * radius then
+          val cell = getCellChecked(x + xi, y + yi)
+          cell.setEnergy(0)
+          cell.setDebris(0)
+          cell.setIndividual(null, 0, 0)
+  
+  private def performActionsOnIndividuals(constants: Field.Constants): Array[Int] =
     val actionCount = Array.ofDim[Int](Action.all.size)
     
     Loops.foreach(0, height): y =>
       Loops.foreach(0, width): x =>
-        val ind = individual(x, y)
+        val cell = getCell(x, y)
+        val ind = cell.individual
         if ind != null then
           val g = ind.genome
           callStack.clear()
@@ -114,15 +82,16 @@ class Field(val width: Int, val height: Int):
 
     actionCount
   
-  private def drainIdleEnergy(constants: Constants): Unit =
+  private def drainIdleEnergy(constants: Field.Constants): Unit =
     Loops.foreach(0, height): y =>
       Loops.foreach(0, width): x =>
-        if individual(x, y) != null then
-          val spentForLiving = math.min(constants.idleCost, health(x, y))
-          debris(x, y) += spentForLiving * constants.debrisFromActions
-          setIndividual(x, y, individual(x, y), direction(x, y), health(x, y) - constants.idleCost)
+        val cell = getCell(x, y)
+        if cell.individual != null then
+          val spentForLiving = math.min(constants.idleCost, cell.health)
+          cell.setDebris(cell.debris + spentForLiving * constants.debrisFromActions)
+          cell.setIndividual(cell.individual, cell.direction, cell.health - constants.idleCost)
 
-  private def depositFoodAndConvertDebris(constants: Constants, stepNumber: Int): Unit =
+  private def depositFoodAndConvertDebris(constants: Field.Constants, stepNumber: Int): Unit =
     val synthDecay = math.exp(-stepNumber * constants.synthesisDecay) // initially 1, then decreases to 0
     val sineDecay = math.exp(-stepNumber * constants.spotDecay) // initially 1, then decreases to 0
     val synthesisBase = 2 * (synthDecay * constants.synthesisInit + (1 - synthDecay) * constants.synthesisFinal)
@@ -132,15 +101,17 @@ class Field(val width: Int, val height: Int):
     val spotXScale = math.Pi * constants.spotPeriodX / width
     val spotYScale = math.Pi * constants.spotPeriodY / height
     
+    val debrisTotalDecay = math.max(0, 1 - constants.debrisDegradation - constants.debrisToEnergy)
     Loops.foreach(0, height): y =>
       val sinY = math.sin(y * spotYScale + spotYOffset)
       Loops.foreach(0, width): x =>
         val cosX = math.cos(x * spotXScale + spotXOffset)
+        val cell = getCell(x, y)
         val newFoodScale = synthesisBase * ((1 - sineDecay) * cosX * cosX * sinY * sinY + sineDecay)
         val newFood = newFoodScale * ThreadLocalRandom.current().nextDouble()
-        val d2e = debris(x, y) * constants.debrisToEnergy
-        debris(x, y) *= 1 - constants.debrisDegradation - constants.debrisToEnergy
-        energy(x, y) += d2e + newFood
+        val d2e = cell.debris * constants.debrisToEnergy
+        cell.setDebris(cell.debris * debrisTotalDecay)
+        cell.setEnergy(cell.energy + d2e + newFood)
   
   private def computeStatistics(actionCount: Array[Int]): Field.StepStatistics =
     var maxHealth = 0.0
@@ -159,13 +130,14 @@ class Field(val width: Int, val height: Int):
     
     Loops.foreach(0, height): y =>
       Loops.foreach(0, width): x =>
-        sumEnergies += energy(x, y)
-        maxEnergy = math.max(maxEnergy, energy(x, y))
-        val ind = individual(x, y)
+        val cell = getCell(x, y)
+        sumEnergies += cell.energy
+        maxEnergy = math.max(maxEnergy, cell.energy)
+        val ind = cell.individual
         if ind != null then
           nBacteria += 1
-          sumHealths += health(x, y)
-          maxHealth = math.max(maxHealth, health(x, y))
+          sumHealths += cell.health
+          maxHealth = math.max(maxHealth, cell.health)
           if ind.label < 0 then nMonsters += 1
           maxGenomeSize = math.max(maxGenomeSize, ind.genome.size)
           sumGenomeSizes += ind.genome.size
@@ -173,8 +145,6 @@ class Field(val width: Int, val height: Int):
           maxChildren = math.max(maxChildren, ind.numberOfChildren)
           maxDistance = math.max(maxDistance, ind.travelDistance)
           maxSpeed = math.max(maxSpeed, ind.averageSpeed)
-    
-    assert(nBacteria == numberOfBacteria)
     
     Field.StepStatistics(
       maxGenomeSize = maxGenomeSize,
@@ -196,7 +166,7 @@ class Field(val width: Int, val height: Int):
       nMonsters = nMonsters,
     )
   
-  def simulationStep(constants: Constants, stepNumber: Int): Field.StepStatistics =
+  def simulationStep(constants: Field.Constants, stepNumber: Int): Field.StepStatistics =
     val actionCount = performActionsOnIndividuals(constants)
     drainIdleEnergy(constants)
     depositFoodAndConvertDebris(constants, stepNumber)
@@ -208,14 +178,17 @@ class Field(val width: Int, val height: Int):
 
   private def labelMaxIndividual[T: Ordering as o](fun: Individual => T, defVal: T, label: Int): Unit =
     var t = defVal
-    forEachIndividual((_, _, ind) => t = o.max(t, fun(ind)))
-    forEachIndividual((x, y, ind) => if o.equiv(t, fun(ind)) then individual(x, y) = ind.copy(label = label))
+    forEachIndividual((_, ind) => t = o.max(t, fun(ind)))
+    forEachIndividual: (c, ind) =>
+      if o.equiv(t, fun(ind)) then
+        c.setIndividual(ind.copy(label = label), c.direction, c.health)
 
-  private inline def forEachIndividual(inline fun: (Int, Int, Individual) => Unit): Unit =
+  private inline def forEachIndividual(inline fun: (Field.Cell, Individual) => Unit): Unit =
     Loops.foreach(0, height): y =>
       Loops.foreach(0, width): x =>
-        val ind = individual(x, y)
-        if ind != null then fun(x, y, ind)
+        val cell = getCell(x, y)
+        val ind = cell.individual
+        if ind != null then fun(cell, ind)
 end Field
 
 object Field:
@@ -227,15 +200,37 @@ object Field:
   val relativeLocationForward = 1
   val numberOfRelativeLocations: Int = relativeLocationsFW.length
 
-  //noinspection ScalaUnusedSymbol this is for ClassTag, actually used in Array.ofDim.
-  private class Matrix[@specialized(Double, Int) T : scala.reflect.ClassTag](width: Int, height: Int):
-    private val data: Array[Array[T]] = Array.ofDim(height, width)
-    def apply(x: Int, y: Int): T = data(y)(x)
-    def checked(x: Int, y: Int): T = data(mod(y, height))(mod(x, width))
-    def update(x: Int, y: Int, value: T): Unit = data(y)(x) = value
-    def setChecked(x: Int, y: Int, value: T): Unit = data(mod(y, height))(mod(x, width)) = value
-    private inline def mod(i: Int, n: Int) = if (i >= 0 && i < n) i else (i % n + n) % n
-
+  class Cell(x: Int, y: Int, f: Field):
+    private var _energy: Double = 0.0
+    private var _debris: Double = 0.0
+    private var _health: Double = 0.0
+    private var _direction: Int = 0
+    private var _individual: Individual = uninitialized
+    
+    def energy: Double = _energy
+    def debris: Double = _debris
+    def health: Double = _health
+    def weight: Int = if _individual == null then 0 else _individual.genome.length
+    def direction: Int = _direction
+    def individual: Individual = _individual
+    
+    def setEnergy(value: Double): Unit = _energy = value
+    def setDebris(value: Double): Unit = _debris = value
+    def setIndividual(g: Individual, d: Int, h: Double): Unit =
+      if _individual != null then
+        f.sumDistancesL(y) -= x
+        f.sumDistancesR(y) -= f.width - 1 - x
+      if h < 0 || g == null then
+        _individual = null
+        _health = 0
+        _direction = 0
+      else
+        _individual = g
+        _health = h
+        _direction = d
+        f.sumDistancesL(y) += x
+        f.sumDistancesR(y) += f.width - 1 - x
+  
   case class StepStatistics(maxGenomeSize: Int, averageGenomeSize: Double, numberOfBacteria: Int,
                             averageHealth: Double, maximalHealth: Double, totalEnergy: Double, maxEnergy: Double,
                             nEats: Int, nForks: Int, nMoves: Int, nClockwise: Int, nCounterClockwise: Int,

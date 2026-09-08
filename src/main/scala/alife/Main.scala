@@ -58,8 +58,8 @@ object Main:
       println("No bacterium nearby")
     } else {
       (-d to d).view.flatMap(dx => Seq(
-        Option(field.getIndividual(x + dx, y + d - math.abs(dx))),
-        Option(field.getIndividual(x + dx, y - d + math.abs(dx))),
+        Option(field.getCellChecked(x + dx, y + d - math.abs(dx)).individual),
+        Option(field.getCellChecked(x + dx, y - d + math.abs(dx)).individual),
       ).flatten).headOption match {
         case Some(g) => println(g.genome.mkString("IArray(", ", ", ")"))
         case None => findAndDumpIndividual(field, x, y, d + 1)
@@ -80,15 +80,14 @@ object Main:
                                       initialGenomeLength: Int, initialHealth: Double): Unit =
     Loops.foreach(0, field.height): y =>
       Loops.foreach(0, field.width): x =>
-        field.setDebris(x, y, 0)
-        field.setEnergy(x, y, 1e-9)
-        if ThreadLocalRandom.current().nextDouble() < initialBacteriaProbability then
-          field.setIndividual(x, y,
-            Individual(IArray.tabulate(initialGenomeLength)(Instruction.random), 0),
-            ThreadLocalRandom.current().nextInt(4),
-            initialHealth)
-        else
-          field.setIndividual(x, y, null, 0, 0)
+        val cell = field.getCell(x, y)
+        cell.setDebris(0)
+        cell.setEnergy(1e-9)
+        if ThreadLocalRandom.current().nextDouble() < initialBacteriaProbability 
+        then cell.setIndividual(Individual(IArray.tabulate(initialGenomeLength)(Instruction.random), 0),
+                                ThreadLocalRandom.current().nextInt(4),
+                                initialHealth)
+        else cell.setIndividual(null, 0, 0)
 
   def main(args: Array[String]): Unit =
     System.setProperty("awt.useSystemAAFontSettings", "on")
@@ -119,6 +118,7 @@ object Main:
       mutationOperator = properties.getProperty("mutationOperator") match
         case "primitive" => Operators.mutatePrimitive
         case "smooth" => Operators.mutateSmooth
+        case other => throw new IllegalArgumentException(s"Unknown value for 'mutationOperator': '$other' (expected one of: 'primitive', 'smooth')")
     )
 
     val useSound = properties.getProperty("sound").toBoolean
@@ -315,7 +315,7 @@ object Main:
         if mouseSmallDestroy.isSelected then clickCommands.addLast((e, _) => e.eraseEverything(x, y, smallRadius))
         if mouseLargeDestroy.isSelected then clickCommands.addLast((e, _) => e.eraseEverything(x, y, largeRadius))
         if mouseDumpGenome.isSelected then findAndDumpIndividual(field, x, y, 0)
-        if mousePutMonster.isSelected then clickCommands.addLast((e, _) => e.setIndividual(x, y, makeMonster(), ThreadLocalRandom.current().nextInt(4), initialHealth))
+        if mousePutMonster.isSelected then clickCommands.addLast((e, _) => e.getCell(x, y).setIndividual(makeMonster(), ThreadLocalRandom.current().nextInt(4), initialHealth))
     })
 
     val window = JFrame(msg.title)
@@ -339,13 +339,8 @@ object Main:
         1
       else generation0 + 1
 
-      val t0 = System.nanoTime()
       val actionStatistics = field.simulationStep(constants, nextGenerationNo)
-      val t1 = System.nanoTime()
       view.fetchField()
-      val t2 = System.nanoTime()
-
-      println(f"$nextGenerationNo: simulation ${(t1 - t0) * 1e-9}%.03f s, view generation ${(t2 - t1) * 1e-9}%03f s")
       
       drainClickQueue(clickCommands, field, actionStatistics)
       SwingEx.invokeLater:

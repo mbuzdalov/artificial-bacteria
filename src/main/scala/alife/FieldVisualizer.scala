@@ -38,17 +38,19 @@ class FieldVisualizer(field: Field, pixelScale: Int) extends JPanel:
 
     Loops.foreach(0, height): y =>
       Loops.foreach(0, width): x =>
-        maxHealth = math.max(maxHealth, field.getHealth(x, y))
-        maxEnergy = math.max(maxEnergy, field.getEnergy(x, y))
-        maxDebris = math.max(maxDebris, field.getDebris(x, y))
+        val cell = field.getCell(x, y)
+        maxHealth = math.max(maxHealth, cell.health)
+        maxEnergy = math.max(maxEnergy, cell.energy)
+        maxDebris = math.max(maxDebris, cell.debris)
 
     Loops.foreach(0, height): y =>
       Loops.foreach(0, width): x =>
-        val g = field.getIndividual(x, y)
+        val cell = field.getCell(x, y)
+        val g = cell.individual
         val z = if g != null && g.label == magentaLabel then 0xffff00ff else
-          val h = (visualConversion(field.getHealth(x, y) / maxHealth) * 255).toInt
-          val e = (visualConversion(field.getEnergy(x, y) / maxEnergy) * 255).toInt
-          val d = (visualConversion(field.getDebris(x, y) / maxDebris) * 255).toInt
+          val h = (visualConversion(cell.health / maxHealth) * 255).toInt
+          val e = (visualConversion(cell.energy / maxEnergy) * 255).toInt
+          val d = (visualConversion(cell.debris / maxDebris) * 255).toInt
           (h << 16) | (e << 8) | d | 0xff000000
         Loops.foreach(0, pixelScale): dy =>
           Loops.foreach(0, pixelScale): dx =>

@@ -52,11 +52,11 @@ object Action:
   abstract class Rotate(rotation: Int, val index: Int) extends Action:
     override def canApply(field: Field, x: Int, y: Int, constants: Constants): Boolean = true
     override def apply(field: Field, x: Int, y: Int, constants: Constants): Unit =
-      assert(canApply(field, x, y, constants))
-      val e = constants.rotationCost * (field.getHealth(x, y) + field.getWeight(x, y))
-      field.setIndividual(x, y, field.getIndividual(x, y), (field.getDirection(x, y) + rotation) & 3, field.getHealth(x, y) - e)
-      field.setDebris(x, y, field.getDebris(x, y) + e * constants.debrisFromActions)
-  
+      val cell = field.getCell(x, y)
+      val e = constants.rotationCost * (cell.health + cell.weight)
+      cell.setIndividual(cell.individual, (cell.direction + rotation) & 3, cell.health - e)
+      cell.setDebris(cell.debris + e * constants.debrisFromActions)
+
   /**
    * The negative (counter-clockwise) rotation:
    * 1) This action can always be applied.
@@ -82,17 +82,18 @@ object Action:
   case object Move extends Action:
     override def index: Int = 3
     override def canApply(field: Field, x: Int, y: Int, constants: Constants): Boolean =
-      field.getHealthRelative(x, y, Field.relativeLocationForward) == 0
+      field.getRelativeCell(x, y, Field.relativeLocationForward).health == 0
     override def apply(field: Field, x: Int, y: Int, constants: Constants): Unit =
       assert(canApply(field, x, y, constants))
-      val e = constants.moveCost * (field.getHealth(x, y) + field.getWeight(x, y) + field.getDebris(x, y))
-      val g = field.getIndividual(x, y)
-      val h = field.getHealth(x, y)
-      val d = field.getDirection(x, y)
-      field.setIndividualRelative(x, y, Field.relativeLocationForward, g, d, h - e)
-      field.setIndividual(x, y, null, 0, 0)
-      field.setDebris(x, y, field.getDebris(x, y) + e * constants.debrisFromActions)
-  
+      val cell = field.getCell(x, y)
+      val e = constants.moveCost * (cell.health + cell.weight + cell.debris)
+      val g = cell.individual
+      val h = cell.health
+      val d = cell.direction
+      field.getRelativeCell(x, y, Field.relativeLocationForward).setIndividual(g, d, h - e)
+      cell.setIndividual(null, 0, 0)
+      cell.setDebris(cell.debris + e * constants.debrisFromActions)
+ 
   /**
    * The food consumption action:
    * 1) This action can always be applied.
@@ -107,16 +108,16 @@ object Action:
     override def index: Int = 4
     override def canApply(field: Field, x: Int, y: Int, constants: Constants): Boolean = true
     override def apply(field: Field, x: Int, y: Int, constants: Constants): Unit =
-      assert(canApply(field, x, y, constants))
-      val w = field.getWeight(x, y)
+      val cell = field.getCell(x, y)
+      val w = cell.weight
       // how much can we eat before hitting our global limit
-      val intakeLimitGlobal = w * constants.healthMultiple - field.getHealth(x, y)
+      val intakeLimitGlobal = w * constants.healthMultiple - cell.health
       // how much can we eat technically: min of current food and of the max increment
-      val intakeLimitLocal = math.min(w * constants.healthIncrementMultiple, field.getEnergy(x, y))
+      val intakeLimitLocal = math.min(w * constants.healthIncrementMultiple, cell.energy)
       val eatAmount = math.max(0, math.min(intakeLimitGlobal, intakeLimitLocal))
-      field.setEnergy(x, y, field.getEnergy(x, y) - eatAmount)
-      field.setIndividual(x, y, field.getIndividual(x, y), field.getDirection(x, y), field.getHealth(x, y) + eatAmount * (1 - constants.eatCost))
-      field.setDebris(x, y, field.getDebris(x, y) + eatAmount * constants.eatCost * constants.debrisFromActions)
+      cell.setEnergy(cell.energy - eatAmount)
+      cell.setIndividual(cell.individual, cell.direction, cell.health + eatAmount * (1 - constants.eatCost))
+      cell.setDebris(cell.debris + eatAmount * constants.eatCost * constants.debrisFromActions)
   
   /**
    * The fork action, which creates another bacterium that is a mutant of the current one:
@@ -129,16 +130,16 @@ object Action:
   case object Fork extends Action:
     override def index: Int = 0
     override def canApply(field: Field, x: Int, y: Int, constants: Constants): Boolean =
-      field.getHealthRelative(x, y, Field.relativeLocationForward) == 0
+      Move.canApply(field, x, y, constants)
     override def apply(field: Field, x: Int, y: Int, constants: Constants): Unit =
       assert(canApply(field, x, y, constants))
-      assert(Move.canApply(field, x, y, constants))
-      val e = constants.forkCost * field.getWeight(x, y)
-      val g = field.getIndividual(x, y)
-      val h = field.getHealth(x, y) - e
-      val d = field.getDirection(x, y)
+      val cell = field.getCell(x, y)
+      val e = constants.forkCost * cell.weight
+      val g = cell.individual
+      val h = cell.health - e
+      val d = cell.direction
       if h / 2 > 0 then
-        field.setIndividual(x, y, constants.mutationOperator(g), d, h / 2)
+        cell.setIndividual(constants.mutationOperator(g), d, h / 2)
         Move.apply(field, x, y, constants)
-      field.setIndividual(x, y, g, d, h / 2)
-      field.setDebris(x, y, field.getDebris(x, y) + e * constants.debrisFromActions)
+      cell.setIndividual(g, d, h / 2)
+      cell.setDebris(cell.debris + e * constants.debrisFromActions)

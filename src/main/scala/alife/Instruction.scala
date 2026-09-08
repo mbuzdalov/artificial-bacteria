@@ -40,46 +40,46 @@ object Instruction:
    * Returns the weight of the current individual.
    */
   case object MyWeight extends Instruction:
-    override def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = 
-      field.getWeight(x, y)
+    override def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
+      field.getCell(x, y).weight
   
   /**
    * Returns the health of the current individual.
    */
   case object MyHealth extends Instruction:
-    override def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = 
-      field.getHealth(x, y)
+    override def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
+      field.getCell(x, y).health
   
   /**
    * Returns the energy at a given relative location to the current individual.
    * @param relativeLocation the relative location.
    */
   case class EnergyAt(relativeLocation: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = 
-      field.getEnergyRelative(x, y, relativeLocation)
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
+      field.getRelativeCell(x, y, relativeLocation).energy
   
   /**
    * Returns the amount of debris at a given relative location to the current individual.
    * @param relativeLocation the relative location.
    */
   case class DebrisAt(relativeLocation: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = 
-      field.getDebrisRelative(x, y, relativeLocation)
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
+      field.getRelativeCell(x, y, relativeLocation).debris
   
   /**
    * Returns the health of an individual at a given relative location to the current individual, 0 if none.
    * @param relativeLocation the relative location.
    */
   case class HealthAt(relativeLocation: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = 
-      field.getHealthRelative(x, y, relativeLocation)
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
+      field.getRelativeCell(x, y, relativeLocation).health
   
   /**
    * Returns the sine of the other instruction's value.
    * @param arg the index of the other instruction acting as an argument.
    */
   case class Sin(arg: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = 
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
       math.sin(data(arg))
   
   /**
@@ -87,7 +87,7 @@ object Instruction:
    * @param arg the index of the other instruction acting as an argument.
    */
   case class Cos(arg: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = 
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
       math.cos(data(arg))
   
   /**
@@ -95,7 +95,7 @@ object Instruction:
    * @param arg the index of the other instruction acting as an argument.
    */
   case class Exp(arg: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = 
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
       math.exp(data(arg))
   
   /**
@@ -103,7 +103,7 @@ object Instruction:
    * @param arg the index of the other instruction acting as an argument.
    */
   case class Log(arg: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = 
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
       math.log(data(arg))
   
   /**
@@ -112,7 +112,7 @@ object Instruction:
    * @param arg2 the index of the other instruction serving as the second argument.
    */
   case class Plus(arg1: Int, arg2: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = 
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
       data(arg1) + data(arg2)
   
   /**
@@ -121,7 +121,7 @@ object Instruction:
    * @param arg2 the index of the other instruction serving as the second argument.
    */
   case class Minus(arg1: Int, arg2: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = 
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
       data(arg1) - data(arg2)
   
   /**
@@ -130,7 +130,7 @@ object Instruction:
    * @param arg2 the index of the other instruction serving as the second argument.
    */
   case class Times(arg1: Int, arg2: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = 
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
       data(arg1) * data(arg2)
   
   /**
@@ -139,7 +139,7 @@ object Instruction:
    * @param arg2 the index of the other instruction serving as the second argument.
    */
   case class Divide(arg1: Int, arg2: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = 
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
       data(arg1) / data(arg2)
   
   /**
@@ -151,7 +151,7 @@ object Instruction:
    * @param arg2 the index of the other instruction serving as the second argument.
    */
   case class Sigmoid(arg1: Int, arg2: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = 
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
       2 / (1 + math.exp(data(arg1) - data(arg2))) - 1
   
   /**
