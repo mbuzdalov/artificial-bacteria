@@ -6,7 +6,7 @@ package alife
  * @param genome the genome 
  * @param label the highlight-related label
  */
-case class Individual(genome: Seq[Instruction], label: Int):
+case class Individual(genome: IArray[Instruction], label: Int):
   private var myLifeSpan: Int = 1
   private var myChildren: Int = 0
   private var myTravelDistance: Int = 0

@@ -61,7 +61,7 @@ object Main:
         Option(field.getIndividual(x + dx, y + d - math.abs(dx))),
         Option(field.getIndividual(x + dx, y - d + math.abs(dx))),
       ).flatten).headOption match {
-        case Some(g) => println(g.genome)
+        case Some(g) => println(g.genome.mkString("IArray(", ", ", ")"))
         case None => findAndDumpIndividual(field, x, y, d + 1)
       }
     }
@@ -84,7 +84,7 @@ object Main:
         field.setEnergy(x, y, 1e-9)
         if ThreadLocalRandom.current().nextDouble() < initialBacteriaProbability then
           field.setIndividual(x, y,
-            Individual(IndexedSeq.tabulate(initialGenomeLength)(Instruction.random), 0),
+            Individual(IArray.tabulate(initialGenomeLength)(Instruction.random), 0),
             ThreadLocalRandom.current().nextInt(4),
             initialHealth)
         else
