@@ -113,6 +113,9 @@ class Field(val width: Int, val height: Int):
       Loops.foreach(0, width): x =>
         val changeX = (math.sin(x * spotXScale + spotXOffset) + 1) / 2
         val cell = getCell(x, y)
+        // The product of changes is additionally multiplied by 4,
+        // because the integral of changeX * changeY over the entire field is 1/4.
+        // This way, `newFoodScale` is exactly `expectedFoodPerCell` on average, which is what we want.
         val newFoodScale = expectedFoodPerCell * (sineDecay + (1 - sineDecay) * changeX * changeY * 4)
         val newFood = newFoodScale * ThreadLocalRandom.current().nextDouble(0, 2)
         val d2e = cell.debris * constants.debrisToFood
