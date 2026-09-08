@@ -7,7 +7,7 @@ and die). Every bacterium has a genome, which is the program it uses to live.
 The length of the genome has an impact on its life, since it becomes harder
 to move and more energy is burned even when not moving.
 
-Each bacterium has some energy, which it has to spend for living on each time instant,
+Each bacterium has some energy ("health"), which it has to spend for living on each time instant,
 and which depends linearly on its genome size. Furthermore, it has to spend some
 energy on moving and rotating. It can also fork: if this happens, the energy is distributed
 between the two new bacteria, and one of them mutates. If the energy falls below zero,
@@ -23,8 +23,8 @@ with the maximum potential is taken.
 
 ## Installing and running
 
-The project is written in Scala, the current version is `2.13.18`.
-Scala itself runs on a Java virtual machine. Java versions from `1.8` to `26` have been tested.
+The project is written in Scala, the current version is `3.9.0`.
+Scala itself runs on a Java virtual machine. Java versions from `21` to `26` have been tested.
 For the user interface, the project uses Swing, and for sound the `javax.sound.sampled`
 infrastructure is used. Other than the standard libraries, the project has no dependencies.
 
@@ -56,7 +56,8 @@ directly derived from the positions and health status of the bacteria.
 In 2022, this was put to GitHub and converted to an sbt-based project,
 so that a larger audience can experiment with it. In 2023, the user interface
 was translated to English, so that a larger audience can actually understand
-what happens :)
+what happens. In 2026, a big rewrite is underway which aims at supporting
+more scientific ways of using this artificial bacteria system.
 
 ## Notes
 
