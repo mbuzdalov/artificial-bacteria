@@ -161,6 +161,7 @@ object Main:
     val statNBacteria = StatText(fontSize, msg.statsCountAlive)
     val statNMonsters = StatText(fontSize, msg.statsCountMonsters)
     val statAverageHealth = StatText(fontSize, msg.statsAvgHealth)
+    val statAverageGenome = StatText(fontSize, msg.statsAvgGenome)
     val statSumEnergy = StatText(fontSize, msg.statsFood)
 
     rightPane.add(brush(fontSize, JLabel(msg.stats)))
@@ -168,12 +169,13 @@ object Main:
     rightPane.add(statNBacteria)
     rightPane.add(statNMonsters)
     rightPane.add(statAverageHealth)
+    rightPane.add(statAverageGenome)
     rightPane.add(statSumEnergy)
     rightPane.add(wellAlignedBox(textWidth, fontSize))
 
     val statMaxLifeSpan = StatText(fontSize, msg.bestLifeSpan)
     val statMaxHealth = StatText(fontSize, msg.bestHealth)
-    val statGenome = StatText(fontSize, msg.bestGenomeSize)
+    val statMaxGenome = StatText(fontSize, msg.maxGenomeSize)
     val statMaxChildren = StatText(fontSize, msg.bestChildren)
     val statMaxDistance = StatText(fontSize, msg.bestDistance)
     val statMaxSpeed = StatText(fontSize, msg.bestSpeed)
@@ -181,7 +183,7 @@ object Main:
     rightPane.add(brush(fontSize, JLabel(msg.best)))
     rightPane.add(statMaxHealth)
     rightPane.add(statMaxLifeSpan)
-    rightPane.add(statGenome)
+    rightPane.add(statMaxGenome)
     rightPane.add(statMaxChildren)
     rightPane.add(statMaxDistance)
     rightPane.add(statMaxSpeed)
@@ -332,23 +334,24 @@ object Main:
 
     @tailrec
     def work(generation0: Int): Unit = if window.isVisible then
-      val generation = if restarted.getAndSet(false) then
+      val nextGenerationNo = if restarted.getAndSet(false) then
         initializeFieldRandomly(field, initialBacteriaProbability, initialGenomeLength, initialHealth)
-        0
-      else generation0
+        1
+      else generation0 + 1
 
+      val actionStatistics = field.simulationStep(constants, nextGenerationNo)
       view.fetchField()
+
       val nBacteria = field.getNumberOfBacteria
-      val genomeSize = field.getMaxGenomeSize
+      val maxGenomeSize = field.getMaxGenomeSize
+      val avgGenomeSize = field.getAverageGenomeSize
 
-      SwingEx.invokeLater:
-        statTime.setValue(generation.toString)
-        statNBacteria.setValue(nBacteria.toString)
-        statGenome.setValue(genomeSize.toString)
-
-      val actionStatistics = field.simulationStep(constants, generation)
       drainClickQueue(clickCommands, field, actionStatistics)
       SwingEx.invokeLater:
+        statTime.setValue(nextGenerationNo.toString)
+        statNBacteria.setValue(nBacteria.toString)
+        statMaxGenome.setValue(maxGenomeSize.toString)
+
         actionsEat.setValue(actionStatistics.nEats.toString)
         actionsMove.setValue(actionStatistics.nMoves.toString)
         actionsFork.setValue(actionStatistics.nForks.toString)
@@ -357,6 +360,7 @@ object Main:
 
         statNMonsters.setValue(actionStatistics.nMonsters.toString)
         statAverageHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.averageHealth))
+        statAverageGenome.setValue(String.format(Locale.US, "%.2f", avgGenomeSize))
         statMaxHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.maximalHealth))
         statSumEnergy.setValue(String.format(Locale.US, "%.2f", actionStatistics.totalEnergy))
         statMaxSpeed.setValue(String.format(Locale.US, "%.2f", actionStatistics.maxSpeed))
@@ -364,12 +368,12 @@ object Main:
         statMaxDistance.setValue(actionStatistics.maxTravelDistance.toString)
         statMaxLifeSpan.setValue(actionStatistics.maxLife.toString)
       
-      if autoPause > 0 && generation > 0 && generation % autoPause == 0 then
+      if autoPause > 0 && nextGenerationNo % autoPause == 0 then
         SwingEx.invokeAndWait:
           executePause(true)
       
       while paused.get() && window.isVisible do Thread.sleep(100)
-      work(generation + 1)
+      work(nextGenerationNo)
     end work
     
     work(0)
