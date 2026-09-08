@@ -51,12 +51,12 @@ object Instruction:
       field.getCell(x, y).health
   
   /**
-   * Returns the energy at a given relative location to the current individual.
+   * Returns the food amount at a given relative location to the current individual.
    * @param relativeLocation the relative location.
    */
-  case class EnergyAt(relativeLocation: Int) extends Instruction:
+  case class FoodAt(relativeLocation: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
-      field.getRelativeCell(x, y, relativeLocation).energy
+      field.getRelativeCell(x, y, relativeLocation).food
   
   /**
    * Returns the amount of debris at a given relative location to the current individual.
@@ -169,7 +169,7 @@ object Instruction:
       case 0 => Const(rng.nextDouble())
       case 1 => MyWeight
       case 2 => MyHealth
-      case 3 => EnergyAt(nextLoc())
+      case 3 => FoodAt(nextLoc())
       case 4 => DebrisAt(nextLoc())
       case 5 => HealthAt(nextLoc())
       case 6 => Sin(nextPos())
@@ -193,7 +193,7 @@ object Instruction:
     case i: Const => i
     case MyWeight => MyWeight
     case MyHealth => MyHealth
-    case i: EnergyAt => i
+    case i: FoodAt => i
     case i: DebrisAt => i
     case i: HealthAt => i
     case Sin(a) => Sin(mapper(a))

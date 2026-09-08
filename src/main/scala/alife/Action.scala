@@ -113,11 +113,11 @@ object Action:
       // how much can we eat before hitting our global limit
       val intakeLimitGlobal = w * constants.healthMultiple - cell.health
       // how much can we eat technically: min of current food and of the max increment
-      val intakeLimitLocal = math.min(w * constants.healthIncrementMultiple, cell.energy)
-      val eatAmount = math.max(0, math.min(intakeLimitGlobal, intakeLimitLocal))
-      cell.setEnergy(cell.energy - eatAmount)
-      cell.setIndividual(cell.individual, cell.direction, cell.health + eatAmount * (1 - constants.eatCost))
-      cell.setDebris(cell.debris + eatAmount * constants.eatCost * constants.debrisFromActions)
+      val intakeLimitLocal = math.min(w * constants.healthIncrementMultiple, cell.food)
+      val toEat = math.max(0, math.min(intakeLimitGlobal, intakeLimitLocal))
+      cell.setFood(cell.food - toEat)
+      cell.setIndividual(cell.individual, cell.direction, cell.health + toEat * (1 - constants.eatCost))
+      cell.setDebris(cell.debris + toEat * constants.eatCost * constants.debrisFromActions)
   
   /**
    * The fork action, which creates another bacterium that is a mutant of the current one:

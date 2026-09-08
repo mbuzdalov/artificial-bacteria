@@ -82,7 +82,7 @@ object Main:
       Loops.foreach(0, field.width): x =>
         val cell = field.getCell(x, y)
         cell.setDebris(0)
-        cell.setEnergy(1e-9)
+        cell.setFood(1e-9)
         if ThreadLocalRandom.current().nextDouble() < initialBacteriaProbability 
         then cell.setIndividual(Individual(IArray.tabulate(initialGenomeLength)(Instruction.random), 0),
                                 ThreadLocalRandom.current().nextInt(4),
@@ -102,7 +102,7 @@ object Main:
       eatCost = properties.getProperty("eatCost").toDouble,
       forkCost = properties.getProperty("forkCost").toDouble,
       debrisDegradation = properties.getProperty("debrisDegradation").toDouble,
-      debrisToEnergy = properties.getProperty("debrisToEnergy").toDouble,
+      debrisToFood = properties.getProperty("debrisToFood").toDouble,
       debrisFromActions = properties.getProperty("debrisFromActions").toDouble,
       synthesisInit = properties.getProperty("synthesisInit").toDouble,
       synthesisFinal = properties.getProperty("synthesisFinal").toDouble,
@@ -310,8 +310,8 @@ object Main:
       override def mouseClicked(e: MouseEvent): Unit =
         val (x, y) = view.translate(e.getX, e.getY)
 
-        if mouseSmallFood.isSelected then clickCommands.addLast((e, s) => e.increaseEnergy(x, y, smallRadius, s.maxEnergy))
-        if mouseLargeFood.isSelected then clickCommands.addLast((e, s) => e.increaseEnergy(x, y, largeRadius, s.maxEnergy))
+        if mouseSmallFood.isSelected then clickCommands.addLast((e, s) => e.increaseFood(x, y, smallRadius, s.maxFood * 1.05))
+        if mouseLargeFood.isSelected then clickCommands.addLast((e, s) => e.increaseFood(x, y, largeRadius, s.maxFood * 1.05))
         if mouseSmallDestroy.isSelected then clickCommands.addLast((e, _) => e.eraseEverything(x, y, smallRadius))
         if mouseLargeDestroy.isSelected then clickCommands.addLast((e, _) => e.eraseEverything(x, y, largeRadius))
         if mouseDumpGenome.isSelected then findAndDumpIndividual(field, x, y, 0)
@@ -358,7 +358,7 @@ object Main:
         statAverageHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.averageHealth))
         statAverageGenome.setValue(String.format(Locale.US, "%.2f", actionStatistics.averageGenomeSize))
         statMaxHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.maximalHealth))
-        statSumEnergy.setValue(String.format(Locale.US, "%.2f", actionStatistics.totalEnergy))
+        statSumEnergy.setValue(String.format(Locale.US, "%.2f", actionStatistics.totalFood))
         statMaxSpeed.setValue(String.format(Locale.US, "%.2f", actionStatistics.maxSpeed))
         statMaxChildren.setValue(actionStatistics.maxChildren.toString)
         statMaxDistance.setValue(actionStatistics.maxTravelDistance.toString)

@@ -11,9 +11,7 @@ class FieldVisualizer(field: Field, pixelScale: Int) extends JPanel:
   private final val heightInPixels = field.height * pixelScale
   private final val pixels = Array.ofDim[Int](widthInPixels * heightInPixels)
 
-  private var maxDebris = 0.0
-  private var maxHealth = 0.0
-  private var maxEnergy = 0.0
+  private var maxDebris, maxHealth, maxFood = 0.0
   private val image = BufferedImage(widthInPixels, heightInPixels, BufferedImage.TYPE_INT_ARGB)
   private var magentaLabel = -1
 
@@ -24,14 +22,14 @@ class FieldVisualizer(field: Field, pixelScale: Int) extends JPanel:
   def translate(x: Int, y: Int): (Int, Int) = (x / pixelScale, y / pixelScale)
 
   def resetState(): Unit =
-    maxHealth = 0
-    maxEnergy = 0
     maxDebris = 0
+    maxHealth = 0
+    maxFood = 0
 
   def fetchField(): Unit =
-    maxHealth *= 0.95
-    maxEnergy *= 0.95
     maxDebris *= 0.95
+    maxHealth *= 0.95
+    maxFood *= 0.95
 
     val height = field.height
     val width = field.width
@@ -39,18 +37,18 @@ class FieldVisualizer(field: Field, pixelScale: Int) extends JPanel:
     Loops.foreach(0, height): y =>
       Loops.foreach(0, width): x =>
         val cell = field.getCell(x, y)
-        maxHealth = math.max(maxHealth, cell.health)
-        maxEnergy = math.max(maxEnergy, cell.energy)
         maxDebris = math.max(maxDebris, cell.debris)
+        maxHealth = math.max(maxHealth, cell.health)
+        maxFood = math.max(maxFood, cell.food)
 
     Loops.foreach(0, height): y =>
       Loops.foreach(0, width): x =>
         val cell = field.getCell(x, y)
         val g = cell.individual
         val z = if g != null && g.label == magentaLabel then 0xffff00ff else
-          val h = (visualConversion(cell.health / maxHealth) * 255).toInt
-          val e = (visualConversion(cell.energy / maxEnergy) * 255).toInt
           val d = (visualConversion(cell.debris / maxDebris) * 255).toInt
+          val h = (visualConversion(cell.health / maxHealth) * 255).toInt
+          val e = (visualConversion(cell.food / maxFood) * 255).toInt
           (h << 16) | (e << 8) | d | 0xff000000
         Loops.foreach(0, pixelScale): dy =>
           Loops.foreach(0, pixelScale): dx =>
