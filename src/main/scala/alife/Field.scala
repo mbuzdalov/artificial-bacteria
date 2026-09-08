@@ -94,21 +94,27 @@ class Field(val width: Int, val height: Int):
   private def depositFoodAndConvertDebris(constants: Field.Constants, stepNumber: Int): Unit =
     val synthDecay = math.exp(-stepNumber * constants.synthesisDecay) // initially 1, then decreases to 0
     val sineDecay = math.exp(-stepNumber * constants.spotDecay) // initially 1, then decreases to 0
-    val synthesisBase = 2 * (synthDecay * constants.synthesisInit + (1 - synthDecay) * constants.synthesisFinal)
     
-    val spotXOffset = 2 * math.Pi * stepNumber * constants.spotSpeedX
-    val spotYOffset = 2 * math.Pi * stepNumber * constants.spotSpeedY
-    val spotXScale = math.Pi * constants.spotPeriodX / width
-    val spotYScale = math.Pi * constants.spotPeriodY / height
+    // This is the average expected energy to deposit onto a cell.
+    // "Average" means it can go up and down, currently in a periodic way.
+    // "Expected" means that the actual deposited amount is sampled u.a.r. from [0; the value determined for the cell].
+    val expectedFoodPerCell = synthDecay * constants.synthesisInit + (1 - synthDecay) * constants.synthesisFinal
+    
+    val pi2 = 2 * math.Pi
+    val spotXOffset = pi2 * stepNumber * constants.spotSpeedX
+    val spotYOffset = pi2 * stepNumber * constants.spotSpeedY
+    val spotXScale = pi2 * constants.spotPeriodX / width
+    val spotYScale = pi2 * constants.spotPeriodY / height
     
     val debrisTotalDecay = math.max(0, 1 - constants.debrisDegradation - constants.debrisToFood)
     Loops.foreach(0, height): y =>
-      val sinY = math.sin(y * spotYScale + spotYOffset)
+      // this is in [0;1]
+      val changeY = (math.sin(y * spotYScale + spotYOffset) + 1) / 2
       Loops.foreach(0, width): x =>
-        val cosX = math.cos(x * spotXScale + spotXOffset)
+        val changeX = (math.sin(x * spotXScale + spotXOffset) + 1) / 2
         val cell = getCell(x, y)
-        val newFoodScale = synthesisBase * ((1 - sineDecay) * cosX * cosX * sinY * sinY + sineDecay)
-        val newFood = newFoodScale * ThreadLocalRandom.current().nextDouble()
+        val newFoodScale = expectedFoodPerCell * (sineDecay + (1 - sineDecay) * changeX * changeY * 4)
+        val newFood = newFoodScale * ThreadLocalRandom.current().nextDouble(0, 2)
         val d2e = cell.debris * constants.debrisToFood
         cell.setDebris(cell.debris * debrisTotalDecay)
         cell.setFood(cell.food + d2e + newFood)
