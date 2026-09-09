@@ -87,13 +87,8 @@ object Main:
     val textWidth = properties.getProperty("textWidth").toInt
     val fontSize = properties.getProperty("fontSize").toInt
 
-    val width = properties.getProperty("fieldWidth").toInt
-    val height = properties.getProperty("fieldHeight").toInt
     val pixelScale = properties.getProperty("pixelScale").toInt
-    val initialHealth = properties.getProperty("initialHealth").toDouble
-    val initialGenomeLength = properties.getProperty("initialGenomeLength").toInt
-    val initialBacteriaProbability = properties.getProperty("initialBacteriaProbability").toDouble
-    val field = Field(width, height)
+    val field = Field(config.fieldWidth, config.fieldHeight)
 
     val smallRadius = properties.getProperty("smallRadius").toInt
     val largeRadius = properties.getProperty("largeRadius").toInt
@@ -294,7 +289,7 @@ object Main:
         if mousePutMonster.isSelected then clickCommands.addLast: (e, _) =>
           val cell = e.getCell(x, y)
           val monster = Individual(compatibleMonster.get, -1)
-          cell.setIndividual(monster, config.random.nextInt(4), initialHealth)
+          cell.setIndividual(monster, config.random.nextInt(4), config.initialHealth)
     })
 
     val window = JFrame(msg.title)

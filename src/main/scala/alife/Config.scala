@@ -5,7 +5,8 @@ import alife.Action.*
 import java.util.random.{RandomGenerator, RandomGeneratorFactory}
 import java.util.{Properties, StringTokenizer}
 
-case class Config(randomSeed: Long, randomFactory: String,
+case class Config(fieldWidth: Int, fieldHeight: Int,
+                  randomSeed: Long, randomFactory: String,
                   initialGenomeLength: Int, initialBacteriaProbability: Double, initialHealth: Double,
                   rotationCost: Double, moveCost: Double, eatCost: Double, forkCost: Double,
                   debrisDegradation: Double, debrisToFood: Double, debrisFromActions: Double,
@@ -54,6 +55,8 @@ object Config:
     val randomFactory = properties.getProperty("randomFactory", RandomGeneratorFactory.getDefault.name())
     
     Config(
+      fieldWidth = properties.getProperty("fieldWidth").toInt,
+      fieldHeight = properties.getProperty("fieldHeight").toInt,
       randomSeed = seed,
       randomFactory = randomFactory,
       initialGenomeLength = properties.getProperty("initialGenomeLength").toInt,
