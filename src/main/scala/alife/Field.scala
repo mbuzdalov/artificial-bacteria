@@ -163,12 +163,7 @@ class Field(val width: Int, val height: Int):
       maximalHealth = maxHealth,
       totalFood = totalFood,
       maxFood = maxFood,
-      // the following selectors are not efficient, but this action is by far not a bottleneck
-      nEats = actionCount(config.actions.indexOf(Action.Eat)),
-      nForks = actionCount(config.actions.indexOf(Action.Fork)),
-      nMoves = actionCount(config.actions.indexOf(Action.Move)),
-      nClockwise = actionCount(config.actions.indexOf(Action.RotatePlus)),
-      nCounterClockwise = actionCount(config.actions.indexOf(Action.RotateMinus)),
+      actionCounts = IArray.unsafeFromArray(actionCount),
       maxLife = maxLifeSpan,
       maxChildren = maxChildren,
       maxTravelDistance = maxDistance,
@@ -256,5 +251,5 @@ object Field:
   
   case class StepStatistics(maxGenomeSize: Int, averageGenomeSize: Double, numberOfBacteria: Int,
                             averageHealth: Double, maximalHealth: Double, totalFood: Double, maxFood: Double,
-                            nEats: Int, nForks: Int, nMoves: Int, nClockwise: Int, nCounterClockwise: Int,
+                            actionCounts: IArray[Int],
                             maxLife: Int, maxChildren: Int, maxTravelDistance: Int, maxSpeed: Double, nMonsters: Int)

@@ -31,11 +31,6 @@ trait Messages:
   def bestSpeed: String
 
   def nActions: String
-  def nActionsFeed: String
-  def nActionsMove: String
-  def nActionsFork: String
-  def nActionsCW: String
-  def nActionsCCW: String
 
   def mouseClick: String
   def mouseClickNothing: String
@@ -87,11 +82,6 @@ object Messages:
     def bestSpeed: String = "The highest speed: "
 
     def nActions: String = "Total number of actions:"
-    def nActionsFeed: String = "Feed: "
-    def nActionsMove: String = "Move: "
-    def nActionsFork: String = "Fork: "
-    def nActionsCW: String = "Rotate (CW): "
-    def nActionsCCW: String = "Rotate (CCW): "
 
     def mouseClick: String = "Mouse click action:"
     def mouseClickNothing: String = "Do nothing"
@@ -141,11 +131,6 @@ object Messages:
     def bestSpeed: String = "Самая большая скорость: "
 
     def nActions: String = "Общее число действий:"
-    def nActionsFeed: String = "Питаться: "
-    def nActionsMove: String = "Двигаться: "
-    def nActionsFork: String = "Делиться: "
-    def nActionsCW: String = "Вращаться (по часовой): "
-    def nActionsCCW: String = "Вращаться (против часовой): "
 
     def mouseClick: String = "Действие клика мыши:"
     def mouseClickNothing: String = "Ничего не делать"

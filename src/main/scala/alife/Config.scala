@@ -12,45 +12,27 @@ case class Config(fieldWidth: Int, fieldHeight: Int,
                   debrisDegradation: Double, debrisToFood: Double, debrisFromActions: Double,
                   synthesisInit: Double, synthesisFinal: Double, synthesisDecay: Double,
                   idleCost: Double, healthMultiple: Double, healthIncrementMultiple: Double,
-                  spotPeriodX: Double, spotSpeedX: Double, spotPeriodY: Double, spotSpeedY: Double,
-                  spotDecay: Double, mutationOperator: Mutation,
+                  spotPeriodX: Double, spotSpeedX: Double, spotPeriodY: Double, spotSpeedY: Double, spotDecay: Double,
                   actions: IArray[Action]):
   val random: RandomGenerator = RandomGeneratorFactory.of(randomFactory).create(randomSeed)
 
 object Config:
-  private class Lookup[T](pairs: (String, T)*):
-    private val map = Map(pairs *)
-    private lazy val expected = map.keys.map(k => s"'$k'").mkString(", ")
-    
-    def apply(arg: String, prefix: => String): T =
-      map.getOrElse(arg, throw IllegalArgumentException(s"${prefix}Unknown value '$arg': expected one of $expected"))
-    
-    def apply(props: Properties, key: String): T =
-      val value = props.getProperty(key)
-      if value == null then throw IllegalArgumentException(s"No property '$key'")
-      this.apply(value, s"For '$key': ")
-  
   def parse(properties: Properties): Config =
-    val globallyEnabledActions = Lookup(
-      "Fork" -> Fork,
-      "Move" -> Move,
-      "Eat" -> Eat,
-      "RotatePlus" -> RotatePlus,
-      "RotateMinus" -> RotateMinus,
-    )
-    
-    val globallyEnabledMutations = Lookup(
-      "Primitive" -> Mutation.Primitive,
-      "Smooth" -> Mutation.Smooth,
-    )
-    
     val actionSequenceSource = StringTokenizer(properties.getProperty("actionSequence"), " ,")
     val actionSequence = IArray.fill[alife.Action](actionSequenceSource.countTokens()):
-      globallyEnabledActions(actionSequenceSource.nextToken(), "In 'actionSequence': ")
+      actionSequenceSource.nextToken() match
+        case s"Fork($operator)" => Fork:
+          operator match
+            case "Primitive" => Mutation.Primitive
+            case "Smooth" => Mutation.Smooth
+        case "Move" => Move
+        case "Eat" => Eat
+        case "RotatePlus" => RotatePlus
+        case "RotateMinus" => RotateMinus
+        case other => throw IllegalArgumentException(s"In 'actionSequence', unknown action '$other'")
     if actionSequence.distinct.size != actionSequence.size then
       throw IllegalArgumentException("Repeated elements in 'actionSequence'")
     
-    val mutationOperator = globallyEnabledMutations(properties, "mutationOperator")
     val seed = properties.getProperty("randomSeed", System.nanoTime().toString).toLong
     val randomFactory = properties.getProperty("randomFactory", RandomGeneratorFactory.getDefault.name())
     
@@ -80,6 +62,5 @@ object Config:
       spotSpeedX = properties.getProperty("spotSpeedX").toDouble,
       spotSpeedY = properties.getProperty("spotSpeedY").toDouble,
       spotDecay = properties.getProperty("spotDecay").toDouble,
-      mutationOperator = mutationOperator,
       actions = actionSequence
     )

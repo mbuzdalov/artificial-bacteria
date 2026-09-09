@@ -154,18 +154,10 @@ object Main:
     rightPane.add(statMaxSpeed)
     rightPane.add(wellAlignedBox(textWidth, fontSize))
 
-    val actionsEat = StatText(fontSize, msg.nActionsFeed)
-    val actionsMove = StatText(fontSize, msg.nActionsMove)
-    val actionsFork = StatText(fontSize, msg.nActionsFork)
-    val actionsCW = StatText(fontSize, msg.nActionsCW)
-    val actionsCCW = StatText(fontSize, msg.nActionsCCW)
+    val actionStats = config.actions.map(a => StatText(fontSize, s"${a.toString}: "))
 
     rightPane.add(brush(fontSize, JLabel(msg.nActions)))
-    rightPane.add(actionsEat)
-    rightPane.add(actionsMove)
-    rightPane.add(actionsFork)
-    rightPane.add(actionsCW)
-    rightPane.add(actionsCCW)
+    for a <- actionStats do rightPane.add(a)
     rightPane.add(wellAlignedBox(textWidth, fontSize))
 
     val mouseDoNothing = brush(fontSize, JToggleButton(msg.mouseClickNothing))
@@ -325,35 +317,32 @@ object Main:
         1
       else generation0 + 1
 
-      val actionStatistics = simulationDelayGate.runOrWait(field.simulationStep(config, nextGenerationNo))
+      val stepStats = simulationDelayGate.runOrWait(field.simulationStep(config, nextGenerationNo))
       val effectiveFPS = 1 / simulationDelayGate.lastLeadInTime
       val visualFPS = 1 / fieldDelayGate.lastLeadInTime
       view.fetchField()
       
-      drainClickQueue(clickCommands, field, actionStatistics)
+      drainClickQueue(clickCommands, field, stepStats)
       labelDelayGate.runOrSkip:
         SwingEx.invokeLater:
           statTime.setValue(nextGenerationNo.toString)
           statSimFPS.setValue(String.format(Locale.US, "%.2f", effectiveFPS))
           statVisFPS.setValue(String.format(Locale.US, "%.2f", visualFPS))
-          statNBacteria.setValue(actionStatistics.numberOfBacteria.toString)
-          statMaxGenome.setValue(actionStatistics.maxGenomeSize.toString)
+          statNBacteria.setValue(stepStats.numberOfBacteria.toString)
+          statMaxGenome.setValue(stepStats.maxGenomeSize.toString)
   
-          actionsEat.setValue(actionStatistics.nEats.toString)
-          actionsMove.setValue(actionStatistics.nMoves.toString)
-          actionsFork.setValue(actionStatistics.nForks.toString)
-          actionsCW.setValue(actionStatistics.nClockwise.toString)
-          actionsCCW.setValue(actionStatistics.nCounterClockwise.toString)
+          Loops.foreach(0, actionStats.length): i =>
+            actionStats(i).setValue(stepStats.actionCounts(i).toString)
   
-          statNMonsters.setValue(actionStatistics.nMonsters.toString)
-          statAverageHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.averageHealth))
-          statAverageGenome.setValue(String.format(Locale.US, "%.2f", actionStatistics.averageGenomeSize))
-          statMaxHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.maximalHealth))
-          statSumEnergy.setValue(String.format(Locale.US, "%.2f", actionStatistics.totalFood))
-          statMaxSpeed.setValue(String.format(Locale.US, "%.2f", actionStatistics.maxSpeed))
-          statMaxChildren.setValue(actionStatistics.maxChildren.toString)
-          statMaxDistance.setValue(actionStatistics.maxTravelDistance.toString)
-          statMaxLifeSpan.setValue(actionStatistics.maxLife.toString)
+          statNMonsters.setValue(stepStats.nMonsters.toString)
+          statAverageHealth.setValue(String.format(Locale.US, "%.2f", stepStats.averageHealth))
+          statAverageGenome.setValue(String.format(Locale.US, "%.2f", stepStats.averageGenomeSize))
+          statMaxHealth.setValue(String.format(Locale.US, "%.2f", stepStats.maximalHealth))
+          statSumEnergy.setValue(String.format(Locale.US, "%.2f", stepStats.totalFood))
+          statMaxSpeed.setValue(String.format(Locale.US, "%.2f", stepStats.maxSpeed))
+          statMaxChildren.setValue(stepStats.maxChildren.toString)
+          statMaxDistance.setValue(stepStats.maxTravelDistance.toString)
+          statMaxLifeSpan.setValue(stepStats.maxLife.toString)
       
       if autoPause > 0 && nextGenerationNo % autoPause == 0 then
         SwingEx.invokeAndWait:

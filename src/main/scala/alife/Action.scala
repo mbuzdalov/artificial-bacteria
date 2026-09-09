@@ -108,8 +108,10 @@ object Action:
    * 3) This energy times `debrisFromActions` is deposited as debris.
    * 4) The health is divided between the old and the new bacteria.
    * 5) The new bacteria additionally incurs all move costs (from the current to the target cell).
+   * 
+   * @param mutation the mutation operator to apply
    */
-  case object Fork extends Action:
+  case class Fork(mutation: Mutation) extends Action:
     override def canApply(field: Field, x: Int, y: Int, config: Config): Boolean =
       Move.canApply(field, x, y, config)
     override def apply(field: Field, x: Int, y: Int, config: Config): Unit =
@@ -120,7 +122,7 @@ object Action:
       val h = cell.health - e
       val d = cell.direction
       if h / 2 > 0 then
-        cell.setIndividual(config.mutationOperator.mutate(g, config.random), d, h / 2)
+        cell.setIndividual(mutation.mutate(g, config.random), d, h / 2)
         Move.apply(field, x, y, config)
       cell.setIndividual(g, d, h / 2)
       cell.setDebris(cell.debris + e * config.debrisFromActions)
