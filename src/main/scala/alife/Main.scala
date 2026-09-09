@@ -1,7 +1,7 @@
 package alife
 
 import alife.sound.{DefaultSynthesizer, SoundWriterJob}
-import alife.util.{Loops, SwingEx}
+import alife.util.{DelayGate, Loops, SwingEx}
 
 import java.awt.*
 import java.awt.event.{ActionEvent, MouseAdapter, MouseEvent}
@@ -101,9 +101,14 @@ object Main:
     val enableLegend = properties.getProperty("enableLegend").toBoolean
     val legendIsOnRight = properties.getProperty("legendIsOnRight").toBoolean
     val autoPause = properties.getProperty("autoPause").toInt
+    
+    val fieldDelayGate = DelayGate()
+    val simulationDelayGate = DelayGate()
+    val labelDelayGate = DelayGate()
 
     field.initialize(config)
-    val view = FieldVisualizer(field, pixelScale)
+    
+    val view = FieldVisualizer(field, pixelScale, fieldDelayGate)
     view.setBackground(Color.BLACK)
 
     val rightPane = JPanel()
@@ -119,6 +124,8 @@ object Main:
     rightPane.add(wellAlignedBox(textWidth, fontSize))
 
     val statTime = StatText(fontSize, msg.statsTimePassed)
+    val statSimFPS = StatText(fontSize, msg.statsSimulationFPS)
+    val statVisFPS = StatText(fontSize, msg.statsVisualizationFPS)
     val statNBacteria = StatText(fontSize, msg.statsCountAlive)
     val statNMonsters = StatText(fontSize, msg.statsCountMonsters)
     val statAverageHealth = StatText(fontSize, msg.statsAvgHealth)
@@ -127,6 +134,8 @@ object Main:
 
     rightPane.add(brush(fontSize, JLabel(msg.stats)))
     rightPane.add(statTime)
+    rightPane.add(statSimFPS)
+    rightPane.add(statVisFPS)
     rightPane.add(statNBacteria)
     rightPane.add(statNMonsters)
     rightPane.add(statAverageHealth)
@@ -302,6 +311,13 @@ object Main:
       soundThread.setDaemon(true)
       soundThread.start()
 
+    fieldDelayGate.reset()
+    labelDelayGate.reset()
+    simulationDelayGate.reset()
+    
+    fieldDelayGate.setDelay(1e-3) // somewhat of a failsafe: the actual FPS on a commodity display cannot be 1000
+    labelDelayGate.setDelay(1e-3) // same
+    
     @tailrec
     def work(generation0: Int): Unit = if window.isVisible then
       val nextGenerationNo = if restarted.getAndSet(false) then
@@ -314,36 +330,47 @@ object Main:
         1
       else generation0 + 1
 
-      val actionStatistics = field.simulationStep(config, nextGenerationNo)
+      val actionStatistics = simulationDelayGate.runOrWait(field.simulationStep(config, nextGenerationNo))
+      val effectiveFPS = 1 / simulationDelayGate.lastLeadInTime
+      val visualFPS = 1 / fieldDelayGate.lastLeadInTime
       view.fetchField()
       
       drainClickQueue(clickCommands, field, actionStatistics)
-      SwingEx.invokeLater:
-        statTime.setValue(nextGenerationNo.toString)
-        statNBacteria.setValue(actionStatistics.numberOfBacteria.toString)
-        statMaxGenome.setValue(actionStatistics.maxGenomeSize.toString)
-
-        actionsEat.setValue(actionStatistics.nEats.toString)
-        actionsMove.setValue(actionStatistics.nMoves.toString)
-        actionsFork.setValue(actionStatistics.nForks.toString)
-        actionsCW.setValue(actionStatistics.nClockwise.toString)
-        actionsCCW.setValue(actionStatistics.nCounterClockwise.toString)
-
-        statNMonsters.setValue(actionStatistics.nMonsters.toString)
-        statAverageHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.averageHealth))
-        statAverageGenome.setValue(String.format(Locale.US, "%.2f", actionStatistics.averageGenomeSize))
-        statMaxHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.maximalHealth))
-        statSumEnergy.setValue(String.format(Locale.US, "%.2f", actionStatistics.totalFood))
-        statMaxSpeed.setValue(String.format(Locale.US, "%.2f", actionStatistics.maxSpeed))
-        statMaxChildren.setValue(actionStatistics.maxChildren.toString)
-        statMaxDistance.setValue(actionStatistics.maxTravelDistance.toString)
-        statMaxLifeSpan.setValue(actionStatistics.maxLife.toString)
+      labelDelayGate.runOrSkip:
+        SwingEx.invokeLater:
+          statTime.setValue(nextGenerationNo.toString)
+          statSimFPS.setValue(String.format(Locale.US, "%.2f", effectiveFPS))
+          statVisFPS.setValue(String.format(Locale.US, "%.2f", visualFPS))
+          statNBacteria.setValue(actionStatistics.numberOfBacteria.toString)
+          statMaxGenome.setValue(actionStatistics.maxGenomeSize.toString)
+  
+          actionsEat.setValue(actionStatistics.nEats.toString)
+          actionsMove.setValue(actionStatistics.nMoves.toString)
+          actionsFork.setValue(actionStatistics.nForks.toString)
+          actionsCW.setValue(actionStatistics.nClockwise.toString)
+          actionsCCW.setValue(actionStatistics.nCounterClockwise.toString)
+  
+          statNMonsters.setValue(actionStatistics.nMonsters.toString)
+          statAverageHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.averageHealth))
+          statAverageGenome.setValue(String.format(Locale.US, "%.2f", actionStatistics.averageGenomeSize))
+          statMaxHealth.setValue(String.format(Locale.US, "%.2f", actionStatistics.maximalHealth))
+          statSumEnergy.setValue(String.format(Locale.US, "%.2f", actionStatistics.totalFood))
+          statMaxSpeed.setValue(String.format(Locale.US, "%.2f", actionStatistics.maxSpeed))
+          statMaxChildren.setValue(actionStatistics.maxChildren.toString)
+          statMaxDistance.setValue(actionStatistics.maxTravelDistance.toString)
+          statMaxLifeSpan.setValue(actionStatistics.maxLife.toString)
       
       if autoPause > 0 && nextGenerationNo % autoPause == 0 then
         SwingEx.invokeAndWait:
           executePause(true)
       
-      while paused.get() && window.isVisible do Thread.sleep(100)
+      if paused.get() then
+        while paused.get() && window.isVisible do Thread.sleep(100)
+        fieldDelayGate.reset()
+        labelDelayGate.reset()
+        simulationDelayGate.reset()
+      end if
+
       work(nextGenerationNo)
     end work
     

@@ -19,6 +19,8 @@ trait Messages:
   def statsAvgHealth: String
   def statsAvgGenome: String
   def statsFood: String
+  def statsSimulationFPS: String
+  def statsVisualizationFPS: String
 
   def best: String
   def bestLifeSpan: String
@@ -73,7 +75,9 @@ object Messages:
     def statsAvgHealth: String = "Average health: "
     def statsAvgGenome: String = "Average genome size: "
     def statsFood: String = "Amount of food: "
-
+    def statsSimulationFPS: String = "Steps per second: "
+    def statsVisualizationFPS: String = "UI updates per second: "
+    
     def best: String = "The best ones:"
     def bestLifeSpan: String = "Max life span: "
     def bestHealth: String = "Max health: "
@@ -124,7 +128,10 @@ object Messages:
     def statsAvgHealth: String = "Среднее здоровье: "
     def statsAvgGenome: String = "Средний размер генома: "
     def statsFood: String = "Количество еды: "
-
+    def statsSimulationFPS: String = "Шагов в секунду: "
+    def statsVisualizationFPS: String = "Обновлений графики в секунду: "
+    
+    
     def best: String = "Самые-самые: "
     def bestLifeSpan: String = "Максимальный срок жизни: "
     def bestHealth: String = "Максимальное здоровье: "
