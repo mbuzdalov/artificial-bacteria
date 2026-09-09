@@ -1,16 +1,20 @@
 package alife
 
 import alife.Action.*
+
+import java.util.random.{RandomGenerator, RandomGeneratorFactory}
 import java.util.{Properties, StringTokenizer}
 
-case class Config(initialGenomeLength: Int, initialBacteriaProbability: Double, initialHealth: Double, 
+case class Config(randomSeed: Long, randomFactory: String,
+                  initialGenomeLength: Int, initialBacteriaProbability: Double, initialHealth: Double,
                   rotationCost: Double, moveCost: Double, eatCost: Double, forkCost: Double,
                   debrisDegradation: Double, debrisToFood: Double, debrisFromActions: Double,
                   synthesisInit: Double, synthesisFinal: Double, synthesisDecay: Double,
                   idleCost: Double, healthMultiple: Double, healthIncrementMultiple: Double,
                   spotPeriodX: Double, spotSpeedX: Double, spotPeriodY: Double, spotSpeedY: Double,
                   spotDecay: Double, mutationOperator: Mutation,
-                  actions: IArray[Action])
+                  actions: IArray[Action]):
+  val random: RandomGenerator = RandomGeneratorFactory.of(randomFactory).create(randomSeed)
 
 object Config:
   private class Lookup[T](pairs: (String, T)*):
@@ -46,8 +50,12 @@ object Config:
       throw IllegalArgumentException("Repeated elements in 'actionSequence'")
     
     val mutationOperator = globallyEnabledMutations(properties, "mutationOperator")
+    val seed = properties.getProperty("randomSeed", System.nanoTime().toString).toLong
+    val randomFactory = properties.getProperty("randomFactory", RandomGeneratorFactory.getDefault.name())
     
     Config(
+      randomSeed = seed,
+      randomFactory = randomFactory,
       initialGenomeLength = properties.getProperty("initialGenomeLength").toInt,
       initialBacteriaProbability = properties.getProperty("initialBacteriaProbability").toDouble,
       initialHealth = properties.getProperty("initialHealth").toDouble,

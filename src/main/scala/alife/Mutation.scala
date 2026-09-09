@@ -31,14 +31,14 @@ object Mutation:
       val newGenome = rng.nextInt(3) match
         case 0 =>
           genome.zipWithIndex.map: (v, i) =>
-            if rng.nextInt(genome.size) == 0 then Instruction.random(i) else v
+            if rng.nextInt(genome.size) == 0 then Instruction.random(rng, i) else v
         case 1 =>
           if genome.isEmpty then genome else
             val (h, t) = genome.splitAt(rng.nextInt(genome.size))
             h ++ t.tail
         case 2 =>
           val (h, t) = genome.splitAt(rng.nextInt(1 + genome.size))
-          (h :+ Instruction.random(h.size)) ++ t
+          (h :+ Instruction.random(rng, h.size)) ++ t
         case _ => throw new AssertionError()
       individual.copy(genome = newGenome)
   
@@ -54,7 +54,7 @@ object Mutation:
       val newGenome = rng.nextInt(3) match
         case 0 =>
           genome.zipWithIndex.map: (v, i) =>
-            if rng.nextInt(genome.size) == 0 then Instruction.random(i) else v
+            if rng.nextInt(genome.size) == 0 then Instruction.random(rng, i) else v
         case 1 =>
           if genome.isEmpty then genome else
             val (h, t) = genome.splitAt(rng.nextInt(genome.size))
@@ -69,6 +69,6 @@ object Mutation:
             // indices `i` and below should stay (`index` == `i` points to element following the insertion)
             // indices above `i + 1` need a +1
             Instruction.mapArguments(a => if a > i then a + 1 else a)(v)
-          (h :+ Instruction.random(h.size)) ++ newTail
+          (h :+ Instruction.random(rng, h.size)) ++ newTail
         case _ => throw new AssertionError()
       individual.copy(genome = newGenome)

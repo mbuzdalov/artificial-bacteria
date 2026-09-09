@@ -2,7 +2,6 @@ package alife
 
 import alife.util.{Loops, PseudoStack}
 
-import java.util.concurrent.ThreadLocalRandom
 import scala.compiletime.uninitialized
 
 /**
@@ -118,7 +117,7 @@ class Field(val width: Int, val height: Int):
         // because the integral of changeX * changeY over the entire field is 1/4.
         // This way, `newFoodScale` is exactly `expectedFoodPerCell` on average, which is what we want.
         val newFoodScale = expectedFoodPerCell * (sineDecay + (1 - sineDecay) * changeX * changeY * 4)
-        val newFood = newFoodScale * ThreadLocalRandom.current().nextDouble(0, 2)
+        val newFood = newFoodScale * config.random.nextDouble(0, 2)
         val d2e = cell.debris * config.debrisToFood
         cell.setDebris(cell.debris * debrisTotalDecay)
         cell.setFood(cell.food + d2e + newFood)
@@ -183,9 +182,9 @@ class Field(val width: Int, val height: Int):
         val cell = getCell(x, y)
         cell.setDebris(0)
         cell.setFood(1e-9)
-        if ThreadLocalRandom.current().nextDouble() < config.initialBacteriaProbability
-        then cell.setIndividual(Individual(IArray.tabulate(config.initialGenomeLength)(Instruction.random), 0),
-          ThreadLocalRandom.current().nextInt(4),
+        if config.random.nextDouble() < config.initialBacteriaProbability
+        then cell.setIndividual(Individual(IArray.tabulate(config.initialGenomeLength)(i => Instruction.random(config.random, i)), 0),
+          config.random.nextInt(4),
           config.initialHealth)
         else cell.setIndividual(null, 0, 0)
   

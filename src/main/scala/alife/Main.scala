@@ -7,8 +7,8 @@ import java.awt.*
 import java.awt.event.{ActionEvent, MouseAdapter, MouseEvent}
 import java.awt.image.BufferedImage
 import java.io.FileReader
+import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.{LinkedBlockingDeque, ThreadLocalRandom}
 import java.util.{Locale, Properties}
 import javax.swing.*
 import scala.annotation.tailrec
@@ -79,6 +79,7 @@ object Main:
     val msg = Messages(properties.getProperty("language"))
 
     val config = Config.parse(properties)
+    println(s"Info: using random factory ${config.randomFactory} and random seed ${config.randomSeed}")
     val compatibleMonster = Monsters.chooseFor(config.actions)
     
     val useSound = properties.getProperty("sound").toBoolean
@@ -271,6 +272,10 @@ object Main:
     view.addMouseListener(new MouseAdapter {
       override def mouseClicked(e: MouseEvent): Unit =
         val (x, y) = view.translate(e.getX, e.getY)
+        
+        // FAT WARNING HERE
+        // All these actions change the state of the field (including the RNG)
+        // We need to deal with it once we support replays, either by disabling this or by logging this.
 
         if mouseSmallFood.isSelected then clickCommands.addLast((e, s) => e.increaseFood(x, y, smallRadius, s.maxFood * 1.05))
         if mouseLargeFood.isSelected then clickCommands.addLast((e, s) => e.increaseFood(x, y, largeRadius, s.maxFood * 1.05))
@@ -280,7 +285,7 @@ object Main:
         if mousePutMonster.isSelected then clickCommands.addLast: (e, _) =>
           val cell = e.getCell(x, y)
           val monster = Individual(compatibleMonster.get, -1)
-          cell.setIndividual(monster, ThreadLocalRandom.current().nextInt(4), initialHealth)
+          cell.setIndividual(monster, config.random.nextInt(4), initialHealth)
     })
 
     val window = JFrame(msg.title)
@@ -300,6 +305,11 @@ object Main:
     @tailrec
     def work(generation0: Int): Unit = if window.isVisible then
       val nextGenerationNo = if restarted.getAndSet(false) then
+
+        // FAT WARNING HERE
+        // The reset does not reset the RNG to its defaults, so the new run will be different even if we fix the seed.
+        // We need to deal with it once we support replays, either by disabling this or by logging this.
+        
         field.initialize(config)
         1
       else generation0 + 1

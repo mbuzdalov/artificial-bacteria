@@ -1,7 +1,5 @@
 package alife
 
-import java.util.concurrent.ThreadLocalRandom
-
 /**
  * A trait for all actions.
  */
@@ -122,7 +120,7 @@ object Action:
       val h = cell.health - e
       val d = cell.direction
       if h / 2 > 0 then
-        cell.setIndividual(config.mutationOperator.mutate(g, ThreadLocalRandom.current()), d, h / 2)
+        cell.setIndividual(config.mutationOperator.mutate(g, config.random), d, h / 2)
         Move.apply(field, x, y, config)
       cell.setIndividual(g, d, h / 2)
       cell.setDebris(cell.debris + e * config.debrisFromActions)

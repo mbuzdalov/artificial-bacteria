@@ -2,7 +2,7 @@ package alife
 
 import alife.util.PseudoStack
 
-import java.util.concurrent.ThreadLocalRandom
+import java.util.random.RandomGenerator
 
 /**
  * A trait for all Cartesian Genetic Programming instructions used in this system.
@@ -156,17 +156,16 @@ object Instruction:
   
   /**
    * Generates a new random instruction for the given position in the individual.
+   * @param random the random number generator.
    * @param position the 0-based position of the instruction being generated.
    * @return the random instruction.
    */
-  def random(position: Int): Instruction =
-    val rng = ThreadLocalRandom.current()
+  def random(random: RandomGenerator, position: Int): Instruction =
+    def nextPos() = random.nextInt(position + 1)
+    def nextLoc() = random.nextInt(Field.numberOfRelativeLocations)
 
-    def nextPos() = rng.nextInt(position + 1)
-    def nextLoc() = rng.nextInt(Field.numberOfRelativeLocations)
-
-    rng.nextInt(15) match
-      case 0 => Const(rng.nextDouble())
+    random.nextInt(15) match
+      case 0 => Const(random.nextDouble())
       case 1 => MyWeight
       case 2 => MyHealth
       case 3 => FoodAt(nextLoc())
