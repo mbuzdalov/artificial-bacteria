@@ -50,8 +50,8 @@ class Field(val width: Int, val height: Int):
           cell.setDebris(0)
           cell.setIndividual(null, 0, 0)
   
-  private def performActionsOnIndividuals(constants: Field.Constants): Array[Int] =
-    val actions = constants.actions
+  private def performActionsOnIndividuals(config: Config): Array[Int] =
+    val actions = config.actions
     val actionCount = Array.ofDim[Int](actions.size)
     
     Loops.foreach(0, height): y =>
@@ -71,43 +71,43 @@ class Field(val width: Int, val height: Int):
           
           var chosenAction = -1
           Loops.foreach(0, math.min(g.size, actions.size)): i =>
-            if actions(i).canApply(this, x, y, constants) then
+            if actions(i).canApply(this, x, y, config) then
               if chosenAction == -1 || callStack(i + 1) > callStack(chosenAction + 1) then
                 chosenAction = i
           
           if chosenAction != -1 then
             val theAction = actions(chosenAction)
             ind.recordAction(theAction)
-            theAction.apply(this, x, y, constants)
+            theAction.apply(this, x, y, config)
             actionCount(chosenAction) += 1
 
     actionCount
   
-  private def drainIdleEnergy(constants: Field.Constants): Unit =
+  private def drainIdleEnergy(config: Config): Unit =
     Loops.foreach(0, height): y =>
       Loops.foreach(0, width): x =>
         val cell = getCell(x, y)
         if cell.individual != null then
-          val spentForLiving = math.min(constants.idleCost, cell.health)
-          cell.setDebris(cell.debris + spentForLiving * constants.debrisFromActions)
-          cell.setIndividual(cell.individual, cell.direction, cell.health - constants.idleCost)
+          val spentForLiving = math.min(config.idleCost, cell.health)
+          cell.setDebris(cell.debris + spentForLiving * config.debrisFromActions)
+          cell.setIndividual(cell.individual, cell.direction, cell.health - config.idleCost)
 
-  private def depositFoodAndConvertDebris(constants: Field.Constants, stepNumber: Int): Unit =
-    val synthDecay = math.exp(-stepNumber * constants.synthesisDecay) // initially 1, then decreases to 0
-    val sineDecay = math.exp(-stepNumber * constants.spotDecay) // initially 1, then decreases to 0
+  private def depositFoodAndConvertDebris(config: Config, stepNumber: Int): Unit =
+    val synthDecay = math.exp(-stepNumber * config.synthesisDecay) // initially 1, then decreases to 0
+    val sineDecay = math.exp(-stepNumber * config.spotDecay) // initially 1, then decreases to 0
     
     // This is the average expected energy to deposit onto a cell.
     // "Average" means it can go up and down, currently in a periodic way.
     // "Expected" means that the actual deposited amount is sampled u.a.r. from [0; the value determined for the cell].
-    val expectedFoodPerCell = synthDecay * constants.synthesisInit + (1 - synthDecay) * constants.synthesisFinal
+    val expectedFoodPerCell = synthDecay * config.synthesisInit + (1 - synthDecay) * config.synthesisFinal
     
     val pi2 = 2 * math.Pi
-    val spotXOffset = pi2 * stepNumber * constants.spotSpeedX
-    val spotYOffset = pi2 * stepNumber * constants.spotSpeedY
-    val spotXScale = pi2 * constants.spotPeriodX / width
-    val spotYScale = pi2 * constants.spotPeriodY / height
+    val spotXOffset = pi2 * stepNumber * config.spotSpeedX
+    val spotYOffset = pi2 * stepNumber * config.spotSpeedY
+    val spotXScale = pi2 * config.spotPeriodX / width
+    val spotYScale = pi2 * config.spotPeriodY / height
     
-    val debrisTotalDecay = math.max(0, 1 - constants.debrisDegradation - constants.debrisToFood)
+    val debrisTotalDecay = math.max(0, 1 - config.debrisDegradation - config.debrisToFood)
     Loops.foreach(0, height): y =>
       // this is in [0;1]
       val changeY = (math.sin(y * spotYScale + spotYOffset) + 1) / 2
@@ -119,11 +119,11 @@ class Field(val width: Int, val height: Int):
         // This way, `newFoodScale` is exactly `expectedFoodPerCell` on average, which is what we want.
         val newFoodScale = expectedFoodPerCell * (sineDecay + (1 - sineDecay) * changeX * changeY * 4)
         val newFood = newFoodScale * ThreadLocalRandom.current().nextDouble(0, 2)
-        val d2e = cell.debris * constants.debrisToFood
+        val d2e = cell.debris * config.debrisToFood
         cell.setDebris(cell.debris * debrisTotalDecay)
         cell.setFood(cell.food + d2e + newFood)
   
-  private def computeStatistics(constants: Field.Constants, actionCount: Array[Int]): Field.StepStatistics =
+  private def computeStatistics(config: Config, actionCount: Array[Int]): Field.StepStatistics =
     var maxHealth = 0.0
     var sumHealths = 0.0
     var totalFood = 0.0
@@ -165,11 +165,11 @@ class Field(val width: Int, val height: Int):
       totalFood = totalFood,
       maxFood = maxFood,
       // the following selectors are not efficient, but this action is by far not a bottleneck
-      nEats = actionCount(constants.actions.indexOf(Action.Eat)),
-      nForks = actionCount(constants.actions.indexOf(Action.Fork)),
-      nMoves = actionCount(constants.actions.indexOf(Action.Move)),
-      nClockwise = actionCount(constants.actions.indexOf(Action.RotatePlus)),
-      nCounterClockwise = actionCount(constants.actions.indexOf(Action.RotateMinus)),
+      nEats = actionCount(config.actions.indexOf(Action.Eat)),
+      nForks = actionCount(config.actions.indexOf(Action.Fork)),
+      nMoves = actionCount(config.actions.indexOf(Action.Move)),
+      nClockwise = actionCount(config.actions.indexOf(Action.RotatePlus)),
+      nCounterClockwise = actionCount(config.actions.indexOf(Action.RotateMinus)),
       maxLife = maxLifeSpan,
       maxChildren = maxChildren,
       maxTravelDistance = maxDistance,
@@ -177,11 +177,24 @@ class Field(val width: Int, val height: Int):
       nMonsters = nMonsters,
     )
   
-  def simulationStep(constants: Field.Constants, stepNumber: Int): Field.StepStatistics =
-    val actionCount = performActionsOnIndividuals(constants)
-    drainIdleEnergy(constants)
-    depositFoodAndConvertDebris(constants, stepNumber)
-    computeStatistics(constants, actionCount)
+  def initialize(config: Config): Unit =
+    Loops.foreach(0, height): y =>
+      Loops.foreach(0, width): x =>
+        val cell = getCell(x, y)
+        cell.setDebris(0)
+        cell.setFood(1e-9)
+        if ThreadLocalRandom.current().nextDouble() < config.initialBacteriaProbability
+        then cell.setIndividual(Individual(IArray.tabulate(config.initialGenomeLength)(Instruction.random), 0),
+          ThreadLocalRandom.current().nextInt(4),
+          config.initialHealth)
+        else cell.setIndividual(null, 0, 0)
+  
+  
+  def simulationStep(config: Config, stepNumber: Int): Field.StepStatistics =
+    val actionCount = performActionsOnIndividuals(config)
+    drainIdleEnergy(config)
+    depositFoodAndConvertDebris(config, stepNumber)
+    computeStatistics(config, actionCount)
 
   def findAndMarkLongestGenome(label: Int): Unit = labelMaxIndividual(_.genome.size, 0, label)
   def findAndMarkMostProductive(label: Int): Unit = labelMaxIndividual(_.numberOfChildren, 0, label)
@@ -246,11 +259,3 @@ object Field:
                             averageHealth: Double, maximalHealth: Double, totalFood: Double, maxFood: Double,
                             nEats: Int, nForks: Int, nMoves: Int, nClockwise: Int, nCounterClockwise: Int,
                             maxLife: Int, maxChildren: Int, maxTravelDistance: Int, maxSpeed: Double, nMonsters: Int)
-
-  case class Constants(rotationCost: Double, moveCost: Double, eatCost: Double, forkCost: Double,
-                       debrisDegradation: Double, debrisToFood: Double, debrisFromActions: Double,
-                       synthesisInit: Double, synthesisFinal: Double, synthesisDecay: Double,
-                       idleCost: Double, healthMultiple: Double, healthIncrementMultiple: Double,
-                       spotPeriodX: Double, spotSpeedX: Double, spotPeriodY: Double, spotSpeedY: Double,
-                       spotDecay: Double, mutationOperator: Individual => Individual,
-                       actions: IArray[Action])

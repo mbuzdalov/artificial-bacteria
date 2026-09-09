@@ -1,18 +1,17 @@
 package alife
 
-import alife.Action.{Fork, Move, Eat, RotatePlus, RotateMinus}
+import alife.sound.{DefaultSynthesizer, SoundWriterJob}
+import alife.util.{Loops, SwingEx}
 
+import java.awt.*
 import java.awt.event.{ActionEvent, MouseAdapter, MouseEvent}
 import java.awt.image.BufferedImage
-import java.awt.*
 import java.io.FileReader
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{LinkedBlockingDeque, ThreadLocalRandom}
-import java.util.{Locale, Properties, StringTokenizer}
+import java.util.{Locale, Properties}
 import javax.swing.*
 import scala.annotation.tailrec
-import alife.sound.{DefaultSynthesizer, SoundWriterJob}
-import alife.util.{Loops, SwingEx}
 
 /**
  * A first attempt to run the bacteria system
@@ -72,19 +71,6 @@ object Main:
       next.apply(field, stats)
       drainClickQueue(queue, field, stats)
 
-  private def initializeFieldRandomly(field: Field, initialBacteriaProbability: Double,
-                                      initialGenomeLength: Int, initialHealth: Double): Unit =
-    Loops.foreach(0, field.height): y =>
-      Loops.foreach(0, field.width): x =>
-        val cell = field.getCell(x, y)
-        cell.setDebris(0)
-        cell.setFood(1e-9)
-        if ThreadLocalRandom.current().nextDouble() < initialBacteriaProbability
-        then cell.setIndividual(Individual(IArray.tabulate(initialGenomeLength)(Instruction.random), 0),
-                                ThreadLocalRandom.current().nextInt(4),
-                                initialHealth)
-        else cell.setIndividual(null, 0, 0)
-
   def main(args: Array[String]): Unit =
     System.setProperty("awt.useSystemAAFontSettings", "on")
     System.setProperty("swing.aatext", "true")
@@ -92,53 +78,9 @@ object Main:
 
     val msg = Messages(properties.getProperty("language"))
 
-    val globallyEnabledActions = Map(
-      "Fork" -> Fork,
-      "Move" -> Move,
-      "Eat" -> Eat,
-      "RotatePlus" -> RotatePlus,
-      "RotateMinus" -> RotateMinus,
-    )
+    val config = Config.parse(properties)
+    val compatibleMonster = Monsters.chooseFor(config.actions)
     
-    val actionSequenceSource = StringTokenizer(properties.getProperty("actionSequence"), " ,")
-    val actionSequence = IArray.fill[alife.Action](actionSequenceSource.countTokens()):
-      val tok = actionSequenceSource.nextToken()
-      globallyEnabledActions.getOrElse(tok, throw new IllegalArgumentException(
-        s"For 'actionSequence', unknown action '$tok': expected one of ${globallyEnabledActions.keys.map(v => s"'$v'").mkString(", ")}"
-      ))
-    if actionSequence.distinct.size != actionSequence.size then
-      throw new IllegalArgumentException("Repeated elements in 'actionSequence'")
-    
-    val compatibleMonster = Monsters.chooseFor(actionSequence)
-    
-    val mutationOperator = properties.getProperty("mutationOperator") match
-      case "primitive" => Operators.mutatePrimitive
-      case "smooth" => Operators.mutateSmooth
-      case other => throw new IllegalArgumentException(s"Unknown value for 'mutationOperator': '$other' (expected one of: 'primitive', 'smooth')")
-    
-    val constants = Field.Constants(
-      rotationCost = properties.getProperty("rotationCost").toDouble,
-      moveCost = properties.getProperty("moveCost").toDouble,
-      eatCost = properties.getProperty("eatCost").toDouble,
-      forkCost = properties.getProperty("forkCost").toDouble,
-      debrisDegradation = properties.getProperty("debrisDegradation").toDouble,
-      debrisToFood = properties.getProperty("debrisToFood").toDouble,
-      debrisFromActions = properties.getProperty("debrisFromActions").toDouble,
-      synthesisInit = properties.getProperty("synthesisInit").toDouble,
-      synthesisFinal = properties.getProperty("synthesisFinal").toDouble,
-      synthesisDecay = properties.getProperty("synthesisDecay").toDouble,
-      idleCost = properties.getProperty("idleCost").toDouble,
-      healthMultiple = properties.getProperty("healthMultiple").toDouble,
-      healthIncrementMultiple = properties.getProperty("healthIncrementMultiple").toDouble,
-      spotPeriodX = properties.getProperty("spotPeriodX").toDouble,
-      spotPeriodY = properties.getProperty("spotPeriodY").toDouble,
-      spotSpeedX = properties.getProperty("spotSpeedX").toDouble,
-      spotSpeedY = properties.getProperty("spotSpeedY").toDouble,
-      spotDecay = properties.getProperty("spotDecay").toDouble,
-      mutationOperator = mutationOperator,
-      actions = actionSequence
-    )
-
     val useSound = properties.getProperty("sound").toBoolean
     val soundFrequency = properties.getProperty("soundFrequency").toFloat
     val textWidth = properties.getProperty("textWidth").toInt
@@ -159,7 +101,7 @@ object Main:
     val legendIsOnRight = properties.getProperty("legendIsOnRight").toBoolean
     val autoPause = properties.getProperty("autoPause").toInt
 
-    initializeFieldRandomly(field, initialBacteriaProbability, initialGenomeLength, initialHealth)
+    field.initialize(config)
     val view = FieldVisualizer(field, pixelScale)
     view.setBackground(Color.BLACK)
 
@@ -358,11 +300,11 @@ object Main:
     @tailrec
     def work(generation0: Int): Unit = if window.isVisible then
       val nextGenerationNo = if restarted.getAndSet(false) then
-        initializeFieldRandomly(field, initialBacteriaProbability, initialGenomeLength, initialHealth)
+        field.initialize(config)
         1
       else generation0 + 1
 
-      val actionStatistics = field.simulationStep(constants, nextGenerationNo)
+      val actionStatistics = field.simulationStep(config, nextGenerationNo)
       view.fetchField()
       
       drainClickQueue(clickCommands, field, actionStatistics)
