@@ -63,7 +63,7 @@ object Messages:
     def legend: String = "Legend:"
     def legendForBacteria: String = "Bacteria"
     def legendForFood: String = "Food"
-    def legendForJunk: String = "Junk and remnants"
+    def legendForJunk: String = "Junk"
     def legendForSelection: String = "Highlighted ones"
 
     def stats: String = "Statistics:"
@@ -114,7 +114,7 @@ object Messages:
     def legend: String = "Обозначения:"
     def legendForBacteria: String = "Бактерии"
     def legendForFood: String = "Еда"
-    def legendForJunk: String = "Отходы и останки"
+    def legendForJunk: String = "Отходы"
     def legendForSelection: String = "Выделенный штамм"
 
     def stats: String = "Статистика:"
