@@ -12,27 +12,26 @@ trait Messages:
   def legendForJunk: String
   def legendForSelection: String
 
-  def stats: String
+  def statsOverall: String
+  def statsAverage: String
+  def statsMaximum: String
+  
   def statsCountAlive: String
   def statsTimePassed: String
   def statsCountMonsters: String
-  def statsAvgHealth: String
-  def statsAvgGenome: String
   def statsFood: String
-  def statsSimulationFPS: String
+  
+  def statsActions: String
+  def statsHealth: String
+  def statsGenomeLength: String
+  def statsNecessaryInstructions: String
+  def statsNecessaryInstructionRatio: String
+  def statsLifeSpan: String
+  def statsNumChildren: String
+  def statsDistanceTravelled: String
+  def statsSpeed: String
   def statsVisualizationFPS: String
-  def statsAvgNecessaryInstructions: String
-  def statsAvgNecessaryInstructionRatio: String
-
-  def best: String
-  def bestLifeSpan: String
-  def bestHealth: String
-  def maxGenomeSize: String
-  def bestChildren: String
-  def bestDistance: String
-  def bestSpeed: String
-
-  def nActions: String
+  def statsSimulationFPS: String
 
   def mouseClick: String
   def mouseClickNothing: String
@@ -51,105 +50,54 @@ trait Messages:
   def highlightFastest: String
 
 object Messages:
-  def apply(lang: String): Messages = if (lang == "ru") Russian else English
+  def apply(lang: String): Messages = English
 
   private object English extends Messages:
-    def title: String = "Artificial Bacteria"
-    def pause: String = "PAUSE"
-    def resume: String = "RESUME"
-    def restart: String = "BEGIN ANEW"
+    override def title: String = "Artificial Bacteria"
+    override def pause: String = "PAUSE"
+    override def resume: String = "RESUME"
+    override def restart: String = "BEGIN ANEW"
 
-    def legend: String = "Legend:"
-    def legendForBacteria: String = "Bacteria"
-    def legendForFood: String = "Food"
-    def legendForJunk: String = "Junk"
-    def legendForSelection: String = "Highlighted ones"
-
-    def stats: String = "Statistics:"
-    def statsCountAlive: String = "Alive bacteria: "
-    def statsTimePassed: String = "Time passed: "
-    def statsCountMonsters: String = "Of which monsters: "
-    def statsAvgHealth: String = "Average health: "
-    def statsAvgGenome: String = "Average genome size: "
-    def statsFood: String = "Amount of food: "
-    def statsSimulationFPS: String = "Steps per second: "
-    def statsVisualizationFPS: String = "UI updates per second: "
-    def statsAvgNecessaryInstructions: String = "Average necessary instructions: "
-    def statsAvgNecessaryInstructionRatio: String = "Average necessary instr ratio: "
+    override def legend: String = "Legend:"
+    override def legendForBacteria: String = "Bacteria"
+    override def legendForFood: String = "Food"
+    override def legendForJunk: String = "Junk"
+    override def legendForSelection: String = "Highlighted ones"
     
-    def best: String = "The best ones:"
-    def bestLifeSpan: String = "Max life span: "
-    def bestHealth: String = "Max health: "
-    def maxGenomeSize: String = "Max genome size: "
-    def bestChildren: String = "Max no of children: "
-    def bestDistance: String = "The longest path: "
-    def bestSpeed: String = "The highest speed: "
-
-    def nActions: String = "Total number of actions:"
-
-    def mouseClick: String = "Mouse click action:"
-    def mouseClickNothing: String = "Do nothing"
-    def mouseClickFoodSmall: String = "Add food (small radius)"
-    def mouseClickFoodLarge: String = "Add food (large radius)"
-    def mouseClickNukeSmall: String = "Erase all (small radius)"
-    def mouseClickNukeLarge: String = "Erase all (large radius)"
-    def mouseClickPrintGenome: String = "Print genome to console"
-    def mouseClickAddMonster: String = "Add a monster"
-
-    def highlight: String = "Who to highlight:"
-    def highlightNothing: String = "Nobody"
-    def highlightMonsters: String = "Monsters and their children"
-    def highlightLongest: String = "The longest genome"
-    def highlightMaxChildren: String = "Max number of children"
-    def highlightFastest: String = "The fastest bacterium"
-
-  private object Russian extends Messages:
-    def title: String = "Бактерии"
-    def pause: String = "ПАУЗА"
-    def resume: String = "ПРОДОЛЖИТЬ"
-    def restart: String = "НАЧАТЬ ЗАНОВО"
-
-    def legend: String = "Обозначения:"
-    def legendForBacteria: String = "Бактерии"
-    def legendForFood: String = "Еда"
-    def legendForJunk: String = "Отходы"
-    def legendForSelection: String = "Выделенный штамм"
-
-    def stats: String = "Статистика:"
-    def statsCountAlive: String = "Живых бактерий: "
-    def statsTimePassed: String = "Время: "
-    def statsCountMonsters: String = "Из них потомков монстров: "
-    def statsAvgHealth: String = "Среднее здоровье: "
-    def statsAvgGenome: String = "Средний размер генома: "
-    def statsFood: String = "Количество еды: "
-    def statsSimulationFPS: String = "Шагов в секунду: "
-    def statsVisualizationFPS: String = "Обновлений графики в секунду: "
-    def statsAvgNecessaryInstructions: String = "Среднее число нужных инструкций: "
-    def statsAvgNecessaryInstructionRatio: String = "Средняя доля нужных инструкций: "
+    override def statsOverall: String = "General stats:"
+    override def statsAverage: String = "Averages:"
     
+    override def statsMaximum: String = "Maxima:"
     
-    def best: String = "Самые-самые: "
-    def bestLifeSpan: String = "Максимальный срок жизни: "
-    def bestHealth: String = "Максимальное здоровье: "
-    def maxGenomeSize: String = "Максимальный размер генома: "
-    def bestChildren: String = "Максимальное число детей: "
-    def bestDistance: String = "Самый длинный путь: "
-    def bestSpeed: String = "Самая большая скорость: "
+    override def statsActions: String = "Total number of actions:"
+    override def statsCountAlive: String = "Alive bacteria: "
+    override def statsTimePassed: String = "Time passed: "
+    override def statsCountMonsters: String = "Of which monsters: "
+    override def statsHealth: String = "Health: "
+    override def statsGenomeLength: String = "Genome length: "
+    override def statsFood: String = "Amount of food: "
+    override def statsSimulationFPS: String = "Steps per second: "
+    override def statsVisualizationFPS: String = "UI updates per second: "
+    override def statsNecessaryInstructions: String = "Necessary instructions: "
+    override def statsNecessaryInstructionRatio: String = "Necessary instr ratio: "
+    
+    override def statsDistanceTravelled: String = "Distance travelled: "
+    override def statsLifeSpan: String = "Life span: "
+    override def statsNumChildren: String = "No of children: "
+    override def statsSpeed: String = "Moves per action: "
 
-    def nActions: String = "Общее число действий:"
-
-    def mouseClick: String = "Действие клика мыши:"
-    def mouseClickNothing: String = "Ничего не делать"
-    def mouseClickFoodSmall: String = "Добавить еды (малый радиус)"
-    def mouseClickFoodLarge: String = "Добавить еды (большой радиус)"
-    def mouseClickNukeSmall: String = "Все стереть (малый радиус)"
-    def mouseClickNukeLarge: String = "Все стереть (большой радиус)"
-    def mouseClickPrintGenome: String = "Вывести геном на консоль"
-    def mouseClickAddMonster: String = "Добавить монстра"
-
-    def highlight: String = "Выбор выделенного штамма:"
-    def highlightNothing: String = "Не выделять"
-    def highlightMonsters: String = "Монстры и их потомки"
-    def highlightLongest: String = "Найти самый длинный геном"
-    def highlightMaxChildren: String = "Максимальное число потомков"
-    def highlightFastest: String = "Самая быстрая бактерия"
+    override def mouseClick: String = "Mouse click action:"
+    override def mouseClickNothing: String = "Do nothing"
+    override def mouseClickFoodSmall: String = "Add food (small radius)"
+    override def mouseClickFoodLarge: String = "Add food (large radius)"
+    override def mouseClickNukeSmall: String = "Erase all (small radius)"
+    override def mouseClickNukeLarge: String = "Erase all (large radius)"
+    override def mouseClickPrintGenome: String = "Print genome to console"
+    override def mouseClickAddMonster: String = "Add a monster"
+    
+    override def highlight: String = "Who to highlight:"
+    override def highlightNothing: String = "Nobody"
+    override def highlightMonsters: String = "Monsters and their children"
+    override def highlightLongest: String = "The longest genome"
+    override def highlightMaxChildren: String = "Max number of children"
+    override def highlightFastest: String = "The fastest bacterium"
