@@ -125,6 +125,8 @@ object Main:
     val statNMonsters = StatText(fontSize, msg.statsCountMonsters)
     val statAverageHealth = StatText(fontSize, msg.statsAvgHealth)
     val statAverageGenome = StatText(fontSize, msg.statsAvgGenome)
+    val statAverageInstructions = StatText(fontSize, msg.statsAvgNecessaryInstructions)
+    val statAverageInstrRatio = StatText(fontSize, msg.statsAvgNecessaryInstructionRatio)
     val statSumEnergy = StatText(fontSize, msg.statsFood)
 
     rightPane.add(brush(fontSize, JLabel(msg.stats)))
@@ -135,6 +137,8 @@ object Main:
     rightPane.add(statNMonsters)
     rightPane.add(statAverageHealth)
     rightPane.add(statAverageGenome)
+    rightPane.add(statAverageInstructions)
+    rightPane.add(statAverageInstrRatio)
     rightPane.add(statSumEnergy)
     rightPane.add(wellAlignedBox(textWidth, fontSize))
 
@@ -337,6 +341,8 @@ object Main:
           statNMonsters.setValue(stepStats.nMonsters.toString)
           statAverageHealth.setValue(String.format(Locale.US, "%.2f", stepStats.averageHealth))
           statAverageGenome.setValue(String.format(Locale.US, "%.2f", stepStats.averageGenomeSize))
+          statAverageInstructions.setValue(String.format(Locale.US, "%.2f", stepStats.avgNecessaryInstructions))
+          statAverageInstrRatio.setValue(String.format(Locale.US, "%.2f", stepStats.avgNecessaryInstructionRatio))
           statMaxHealth.setValue(String.format(Locale.US, "%.2f", stepStats.maximalHealth))
           statSumEnergy.setValue(String.format(Locale.US, "%.2f", stepStats.totalFood))
           statMaxSpeed.setValue(String.format(Locale.US, "%.2f", stepStats.maxSpeed))

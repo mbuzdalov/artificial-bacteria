@@ -204,4 +204,26 @@ object Instruction:
     case Times(a1, a2) => Times(mapper(a1), mapper(a2))
     case Divide(a1, a2) => Divide(mapper(a1), mapper(a2))
     case Sigmoid(a1, a2) => Sigmoid(mapper(a1), mapper(a2))
-    
+  
+  /**
+   * Calls a given function for each argument index of a supplied instruction.
+   * @param instruction the instruction to deal with.
+   * @param body the function to call on each instruction's argument index.
+   */
+  inline def forEachArgument(instruction: Instruction)(inline body: Int => Any): Unit = instruction match
+    case i: Const => 
+    case MyWeight => 
+    case MyHealth => 
+    case i: FoodAt =>
+    case i: DebrisAt =>
+    case i: HealthAt =>
+    case Sin(a) => body(a)
+    case Cos(a) => body(a)
+    case Exp(a) => body(a)
+    case Log(a) => body(a)
+    case Plus(a1, a2) => body(a1); body(a2)
+    case Minus(a1, a2) => body(a1); body(a2)
+    case Times(a1, a2) => body(a1); body(a2)
+    case Divide(a1, a2) => body(a1); body(a2)
+    case Sigmoid(a1, a2) => body(a1); body(a2)
+ 

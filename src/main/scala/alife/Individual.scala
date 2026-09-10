@@ -1,8 +1,12 @@
 package alife
 
+import alife.util.Loops
+import alife.Instruction.*
+
 /**
  * This class encapsulates the genome (a sequence of instructions), a label used in the visual highlighting code,
  * and some lifetime statistics of an individual.
+ *
  * @param genome the genome
  * @param label the highlight-related label
  */
@@ -10,6 +14,26 @@ case class Individual(genome: IArray[Instruction], label: Int):
   private var myLifeSpan: Int = 1
   private var myChildren: Int = 0
   private var myTravelDistance: Int = 0
+  private var myNecessaryInstructions: Int = -1
+  
+  /**
+   * Computes the number of necessary instructions for this genome, given the configuration.
+   * An instruction is defined to be necessary if at least one of the action outputs depends on this instruction.
+   * This number is cached in the individual because the config remains the same throughout the simulation.
+   * @param config the life configuration to use. 
+   * @return the number of necessary instructions.
+   */
+  def necessaryInstructions(config: Config): Int =
+    if myNecessaryInstructions == -1 then
+      val used = Array.ofDim[Boolean](genome.length)
+      Loops.foreach(0, genome.length): ii =>
+        val idx = genome.length - 1 - ii
+        if ii < config.actions.length then used(idx) = true
+        Instruction.forEachArgument(genome(idx)): a =>
+          if a > 0 && idx - a >= 0 then used(idx - a) = true
+      val result = Loops.count(0, used.length)(i => used(i))
+      myNecessaryInstructions = result
+    myNecessaryInstructions
   
   /**
    * Returns the lifespan of this individual.

@@ -45,3 +45,11 @@ object Loops:
     while i <= to do
       body(i)
       i += 1
+
+  inline def count(from: Int, until: Int)(inline predicate: Int => Boolean): Int =
+    var i = from
+    var result = 0
+    while i < until do
+      if predicate(i) then result += 1
+      i += 1
+    result  

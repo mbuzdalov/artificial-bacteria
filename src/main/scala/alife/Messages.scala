@@ -21,6 +21,8 @@ trait Messages:
   def statsFood: String
   def statsSimulationFPS: String
   def statsVisualizationFPS: String
+  def statsAvgNecessaryInstructions: String
+  def statsAvgNecessaryInstructionRatio: String
 
   def best: String
   def bestLifeSpan: String
@@ -72,6 +74,8 @@ object Messages:
     def statsFood: String = "Amount of food: "
     def statsSimulationFPS: String = "Steps per second: "
     def statsVisualizationFPS: String = "UI updates per second: "
+    def statsAvgNecessaryInstructions: String = "Average necessary instructions: "
+    def statsAvgNecessaryInstructionRatio: String = "Average necessary instr ratio: "
     
     def best: String = "The best ones:"
     def bestLifeSpan: String = "Max life span: "
@@ -120,6 +124,8 @@ object Messages:
     def statsFood: String = "Количество еды: "
     def statsSimulationFPS: String = "Шагов в секунду: "
     def statsVisualizationFPS: String = "Обновлений графики в секунду: "
+    def statsAvgNecessaryInstructions: String = "Среднее число нужных инструкций: "
+    def statsAvgNecessaryInstructionRatio: String = "Средняя доля нужных инструкций: "
     
     
     def best: String = "Самые-самые: "

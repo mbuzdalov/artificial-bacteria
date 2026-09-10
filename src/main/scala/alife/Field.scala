@@ -137,6 +137,9 @@ class Field(val width: Int, val height: Int):
     var maxDistance = 0
     var maxSpeed = 0.0
     
+    var sumNecessaryInstructions = 0
+    var sumNecessaryInstructionRates = 0.0
+    
     Loops.foreach(0, height): y =>
       Loops.foreach(0, width): x =>
         val cell = getCell(x, y)
@@ -154,6 +157,8 @@ class Field(val width: Int, val height: Int):
           maxChildren = math.max(maxChildren, ind.numberOfChildren)
           maxDistance = math.max(maxDistance, ind.travelDistance)
           maxSpeed = math.max(maxSpeed, ind.averageSpeed)
+          sumNecessaryInstructions += ind.necessaryInstructions(config)
+          sumNecessaryInstructionRates += ind.necessaryInstructions(config).toDouble / ind.genome.size
     
     Field.StepStatistics(
       maxGenomeSize = maxGenomeSize,
@@ -169,6 +174,8 @@ class Field(val width: Int, val height: Int):
       maxTravelDistance = maxDistance,
       maxSpeed = maxSpeed,
       nMonsters = nMonsters,
+      avgNecessaryInstructions = sumNecessaryInstructions.toDouble / nBacteria, 
+      avgNecessaryInstructionRatio = sumNecessaryInstructionRates / nBacteria,
     )
   
   def initialize(config: Config): Unit =
@@ -252,4 +259,5 @@ object Field:
   case class StepStatistics(maxGenomeSize: Int, averageGenomeSize: Double, numberOfBacteria: Int,
                             averageHealth: Double, maximalHealth: Double, totalFood: Double, maxFood: Double,
                             actionCounts: IArray[Int],
-                            maxLife: Int, maxChildren: Int, maxTravelDistance: Int, maxSpeed: Double, nMonsters: Int)
+                            maxLife: Int, maxChildren: Int, maxTravelDistance: Int, maxSpeed: Double, nMonsters: Int,
+                            avgNecessaryInstructions: Double, avgNecessaryInstructionRatio: Double)
