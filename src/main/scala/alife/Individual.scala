@@ -2,8 +2,8 @@ package alife
 
 /**
  * This class encapsulates the genome (a sequence of instructions), a label used in the visual highlighting code,
- * and some lifetime statistics of an individual. 
- * @param genome the genome 
+ * and some lifetime statistics of an individual.
+ * @param genome the genome
  * @param label the highlight-related label
  */
 case class Individual(genome: IArray[Instruction], label: Int):
@@ -17,7 +17,7 @@ case class Individual(genome: IArray[Instruction], label: Int):
    * Every individual that is still alive participates in at least one simulation frame per simulation step,
    * but because of top-to-bottom left-to-right scanning, an individual may be lucky enough to get simulated more than
    * once per step.
-   * 
+   *
    * @return the lifespan.
    */
   def lifeSpan: Int = myLifeSpan
@@ -39,8 +39,8 @@ case class Individual(genome: IArray[Instruction], label: Int):
   /**
    * Returns the average speed of this individual.
    * This is formally defined as the number of `Move` actions divided by the number of all actions performed,
-   * so is always at least 0 and at most 1. 
-   * This function returns 0 if the individual has not lived yet. 
+   * so is always at least 0 and at most 1.
+   * This function returns 0 if the individual has not lived yet.
    * @return the average speed.
    */
   def averageSpeed: Double = if lifeSpan == 0 then 0 else travelDistance.toDouble / lifeSpan
@@ -53,6 +53,6 @@ case class Individual(genome: IArray[Instruction], label: Int):
   def recordAction(action: Action): Unit =
     myLifeSpan += 1
     action match
-      case Action.Fork => myChildren += 1
+      case a: Action.Fork => myChildren += 1
       case Action.Move => myTravelDistance += 1
       case _ =>
