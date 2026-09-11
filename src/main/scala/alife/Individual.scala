@@ -1,6 +1,6 @@
 package alife
 
-import alife.util.Loops
+import alife.util.Loops.*
 import alife.Instruction.*
 
 /**
@@ -26,12 +26,12 @@ case class Individual(genome: IArray[Instruction], label: Int):
   def necessaryInstructions(config: Config): Int =
     if myNecessaryInstructions == -1 then
       val used = Array.ofDim[Boolean](genome.length)
-      Loops.foreach(0, genome.length): ii =>
+      loopFromUntil(0, genome.length): ii =>
         val idx = genome.length - 1 - ii
         if ii < config.actions.length then used(idx) = true
         Instruction.forEachArgument(genome(idx)): a =>
           if a > 0 && idx - a >= 0 then used(idx - a) = true
-      val result = Loops.count(0, used.length)(i => used(i))
+      val result = countFromUntil(0, used.length)(i => used(i))
       myNecessaryInstructions = result
     myNecessaryInstructions
   

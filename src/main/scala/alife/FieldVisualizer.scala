@@ -1,7 +1,8 @@
 package alife
 
 import alife.FieldVisualizer.StateBuffers
-import alife.util.{DelayGate, Loops}
+import alife.util.DelayGate
+import alife.util.Loops.*
 
 import java.awt.Graphics
 import java.awt.image.BufferedImage
@@ -18,7 +19,7 @@ class FieldVisualizer(field: Field, pixelScale: Int, delayGate: DelayGate) exten
   
   private val painter = new Runnable:
     override def run(): Unit =
-      Loops.forever:
+      loopForever:
         delayGate.runOrWait:
           buffers.acquireReadBuffer().upload(image, pixelScale, pixels, FieldVisualizer.this)
           buffers.releaseReadBuffer()
@@ -64,8 +65,8 @@ object FieldVisualizer:
       maxFood *= 0.95
       
       var idx = 0
-      Loops.foreach(0, field.height): y =>
-        Loops.foreach(0, field.width): x =>
+      loopFromUntil(0, field.height): y =>
+        loopFromUntil(0, field.width): x =>
           val cell = field.getCell(x, y)
           val ind = cell.individual
           val i3 = idx * 3
@@ -82,8 +83,8 @@ object FieldVisualizer:
       val widthInPixels = w * pixelScale
       val heightInPixels = h * pixelScale
       var idx = 0
-      Loops.foreach(0, h): y =>
-        Loops.foreach(0, w): x =>
+      loopFromUntil(0, h): y =>
+        loopFromUntil(0, w): x =>
           val i3 = idx * 3
           val z = if magSequence(idx) then 0xffff00ff else
             val d = (visualConversion(dhfSequence(i3) / maxDebris) * 255).toInt
@@ -92,8 +93,8 @@ object FieldVisualizer:
             (h << 16) | (e << 8) | d | 0xff000000
           idx += 1
 
-          Loops.foreach(0, pixelScale): dy =>
-            Loops.foreach(0, pixelScale): dx =>
+          loopFromUntil(0, pixelScale): dy =>
+            loopFromUntil(0, pixelScale): dx =>
               pixels(pixelScale * x + dx + (pixelScale * y + dy) * widthInPixels) = z
       
       image.synchronized(image.setRGB(0, 0, widthInPixels, heightInPixels, pixels, 0, widthInPixels))

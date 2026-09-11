@@ -1,7 +1,7 @@
 package alife.sound
 
 import alife.Field
-import alife.util.Loops
+import alife.util.Loops.*
 
 import javax.sound.sampled.{AudioFormat, AudioSystem}
 
@@ -25,7 +25,7 @@ class SoundWriterJob(field: Field, synthesizer: SoundSynthesizer, frequency: Flo
     dataLine.start()
 
     var nFrames = 0L
-    Loops.forever:
+    loopForever:
       synthesizer.synthesizeOneFrame(field, nFrames.toDouble / frequency, fieldSideBuffer)
       nFrames += 1
       val maxFieldValue = math.max(math.abs(fieldSideBuffer(0)), math.abs(fieldSideBuffer(1)))

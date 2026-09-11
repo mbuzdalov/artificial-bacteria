@@ -1,7 +1,8 @@
 package alife
 
 import alife.sound.{DefaultSynthesizer, SoundWriterJob}
-import alife.util.{DelayGate, Loops, SwingEx}
+import alife.util.{DelayGate, SwingEx}
+import alife.util.Loops.*
 
 import java.awt.*
 import java.awt.event.{ActionEvent, MouseAdapter, MouseEvent}
@@ -44,8 +45,8 @@ object Main:
   private def makeMonotoneIcon(size: Int, color: Color): ImageIcon =
     val image = BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
     val rgb = color.getRGB
-    Loops.foreach(0, size): y =>
-      Loops.foreach(0, size): x =>
+    loopFromUntil(0, size): y =>
+      loopFromUntil(0, size): x =>
         image.setRGB(x, y, rgb)
     ImageIcon(image)
 
@@ -339,7 +340,7 @@ object Main:
           statNBacteria.setValue(stepStats.numberOfBacteria.toString)
           statMaxGenome.setValue(stepStats.maxGenomeSize.toString)
   
-          Loops.foreach(0, actionStats.length): i =>
+          loopFromUntil(0, actionStats.length): i =>
             actionStats(i).setValue(stepStats.actionCounts(i).toString)
   
           statNMonsters.setValue(stepStats.nMonsters.toString)

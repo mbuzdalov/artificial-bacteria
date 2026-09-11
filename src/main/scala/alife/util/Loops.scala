@@ -7,9 +7,9 @@ object Loops:
   /**
    * A forever loop that returns `Nothing`.
    * @param body the body to execute forever.
-   * @return nothing
+   * @return nothing.
    */
-  inline def forever(inline body: => Unit): Nothing =
+  inline def loopForever(inline body: => Unit): Nothing =
     while true do body
     throw new AssertionError("Should never reach there")
   
@@ -19,11 +19,11 @@ object Loops:
    *
    * This is an inline function which inlines the body, so accessing local `var`s does not incur a runtime penalty.
    *
-   * @param from the initial value (inclusive)
-   * @param until the final value (exclusive)
+   * @param from the initial value (inclusive).
+   * @param until the final value (exclusive).
    * @param body the loop body to execute.
    */
-  inline def foreach(from: Int, until: Int)(inline body: Int => Unit): Unit =
+  inline def loopFromUntil(from: Int, until: Int)(inline body: Int => Unit): Unit =
     var i = from
     while i < until do
       body(i)
@@ -36,17 +36,28 @@ object Loops:
    * This is an inline function which inlines the body, so accessing local `var`s does not incur a runtime penalty.
    * No bound checking is performed; `to` equal to `Int.MaxValue` would loop forever.
    *
-   * @param from the initial value (inclusive)
-   * @param to the final value (inclusive)
+   * @param from the initial value (inclusive).
+   * @param to the final value (inclusive).
    * @param body the loop body to execute.
    */
-  inline def foreachInclusive(from: Int, to: Int)(inline body: Int => Unit): Unit =
+  inline def loopFromTo(from: Int, to: Int)(inline body: Int => Unit): Unit =
     var i = from
     while i <= to do
       body(i)
       i += 1
-
-  inline def count(from: Int, until: Int)(inline predicate: Int => Boolean): Int =
+  
+  /**
+   * Counts how many times the given `predicate` returns `true` for integers starting at `from`, inclusively,
+   * and ending at `until`, exclusively.
+   * 
+   * This is an inline function which inlines the body, so accessing local `var`s does not incur a runtime penalty.
+   * 
+   * @param from the initial value (inclusive).
+   * @param until the final value (exclusive).
+   * @param predicate the predicate to test.
+   * @return the number of times `predicate` returned `true`.
+   */
+  inline def countFromUntil(from: Int, until: Int)(inline predicate: Int => Boolean): Int =
     var i = from
     var result = 0
     while i < until do

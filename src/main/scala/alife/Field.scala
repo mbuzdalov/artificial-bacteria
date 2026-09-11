@@ -1,6 +1,7 @@
 package alife
 
-import alife.util.{Loops, PseudoStack}
+import alife.util.PseudoStack
+import alife.util.Loops.*
 
 import scala.compiletime.uninitialized
 
@@ -33,16 +34,16 @@ class Field(val width: Int, val height: Int):
   def getSumOfDistancesFromRight(y: Int): Int = sumDistancesR(y)
 
   def increaseFood(x: Int, y: Int, radius: Int, targetAmount: Double): Unit =
-    Loops.foreachInclusive(-radius, radius): xi =>
-      Loops.foreachInclusive(-radius, radius): yi =>
+    loopFromTo(-radius, radius): xi =>
+      loopFromTo(-radius, radius): yi =>
         if xi * xi + yi * yi <= radius * radius then
           val cell = getCellChecked(x + xi, y + yi)
           val oldFood = cell.food
           cell.setFood(oldFood + (targetAmount - oldFood) * 0.5)
 
   def eraseEverything(x: Int, y: Int, radius: Int): Unit =
-    Loops.foreachInclusive(-radius, radius): xi =>
-      Loops.foreachInclusive(-radius, radius): yi =>
+    loopFromTo(-radius, radius): xi =>
+      loopFromTo(-radius, radius): yi =>
         if xi * xi + yi * yi <= radius * radius then
           val cell = getCellChecked(x + xi, y + yi)
           cell.setFood(0)
@@ -53,14 +54,14 @@ class Field(val width: Int, val height: Int):
     val actions = config.actions
     val actionCount = Array.ofDim[Int](actions.size)
     
-    Loops.foreach(0, height): y =>
-      Loops.foreach(0, width): x =>
+    loopFromUntil(0, height): y =>
+      loopFromUntil(0, width): x =>
         val cell = getCell(x, y)
         val ind = cell.individual
         if ind != null then
           val g = ind.genome
           callStack.clear()
-          Loops.foreach(0, g.size): i =>
+          loopFromUntil(0, g.size): i =>
             callStack.push(g(i).apply(this, x, y, callStack))
             
           // Outputs are organized as follows:
@@ -69,7 +70,7 @@ class Field(val width: Int, val height: Int):
           // order:   most recent   2nd most recent  3rd most recent  ...
           
           var chosenAction = -1
-          Loops.foreach(0, math.min(g.size, actions.size)): i =>
+          loopFromUntil(0, math.min(g.size, actions.size)): i =>
             if actions(i).canApply(this, x, y, config) then
               if chosenAction == -1 || callStack(i + 1) > callStack(chosenAction + 1) then
                 chosenAction = i
@@ -83,8 +84,8 @@ class Field(val width: Int, val height: Int):
     actionCount
   
   private def drainIdleEnergy(config: Config): Unit =
-    Loops.foreach(0, height): y =>
-      Loops.foreach(0, width): x =>
+    loopFromUntil(0, height): y =>
+      loopFromUntil(0, width): x =>
         val cell = getCell(x, y)
         if cell.individual != null then
           val spentForLiving = math.min(config.idleCost, cell.health)
@@ -107,10 +108,10 @@ class Field(val width: Int, val height: Int):
     val spotYScale = pi2 * config.spotPeriodY / height
     
     val debrisTotalDecay = math.max(0, 1 - config.debrisDegradation - config.debrisToFood)
-    Loops.foreach(0, height): y =>
+    loopFromUntil(0, height): y =>
       // this is in [0;1]
       val changeY = (math.sin(y * spotYScale + spotYOffset) + 1) / 2
-      Loops.foreach(0, width): x =>
+      loopFromUntil(0, width): x =>
         val changeX = (math.sin(x * spotXScale + spotXOffset) + 1) / 2
         val cell = getCell(x, y)
         // The product of changes is additionally multiplied by 4,
@@ -140,8 +141,8 @@ class Field(val width: Int, val height: Int):
     var sumNecessaryInstructions = 0
     var sumNecessaryInstructionRates = 0.0
     
-    Loops.foreach(0, height): y =>
-      Loops.foreach(0, width): x =>
+    loopFromUntil(0, height): y =>
+      loopFromUntil(0, width): x =>
         val cell = getCell(x, y)
         totalFood += cell.food
         maxFood = math.max(maxFood, cell.food)
@@ -179,8 +180,8 @@ class Field(val width: Int, val height: Int):
     )
   
   def initialize(config: Config): Unit =
-    Loops.foreach(0, height): y =>
-      Loops.foreach(0, width): x =>
+    loopFromUntil(0, height): y =>
+      loopFromUntil(0, width): x =>
         val cell = getCell(x, y)
         cell.setDebris(0)
         cell.setFood(1e-9)
@@ -209,8 +210,8 @@ class Field(val width: Int, val height: Int):
         c.setIndividual(ind.copy(label = label), c.direction, c.health)
 
   private inline def forEachIndividual(inline fun: (Field.Cell, Individual) => Unit): Unit =
-    Loops.foreach(0, height): y =>
-      Loops.foreach(0, width): x =>
+    loopFromUntil(0, height): y =>
+      loopFromUntil(0, width): x =>
         val cell = getCell(x, y)
         val ind = cell.individual
         if ind != null then fun(cell, ind)

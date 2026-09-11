@@ -1,7 +1,7 @@
 package alife.sound
 
 import alife.Field
-import alife.util.Loops
+import alife.util.Loops.*
 
 /**
  * This is the current default sound synthesis implementation,
@@ -27,7 +27,7 @@ object DefaultSynthesizer extends SoundSynthesizer:
     var left, right = 0.0
     var note = math.pow(2, (height - 1) / pixelsPerOctave) * baseFrequency * time
     val noteStep = math.pow(2, 1 / pixelsPerOctave)
-    Loops.foreach(0, height): y =>
+    loopFromUntil(0, height): y =>
       // Getting amplitudes from the field.
       // A very left individual contributes a lot to distances from right.
       // This happens asynchronously with whatever is happening in the field,
