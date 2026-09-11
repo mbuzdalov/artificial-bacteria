@@ -21,8 +21,7 @@ class FieldVisualizer(field: Field, pixelScale: Int, delayGate: DelayGate) exten
     override def run(): Unit =
       loopForever:
         delayGate.runOrWait:
-          buffers.acquireReadBuffer().upload(image, pixelScale, pixels, FieldVisualizer.this)
-          buffers.releaseReadBuffer()
+          buffers.forReadBuffer(_.upload(image, pixelScale, pixels, FieldVisualizer.this))
   private val thread = Thread(painter, "Field Visualizer Painter Thread")
   thread.setDaemon(true)
   thread.start()
@@ -31,13 +30,8 @@ class FieldVisualizer(field: Field, pixelScale: Int, delayGate: DelayGate) exten
 
   def translate(x: Int, y: Int): (Int, Int) = (x / pixelScale, y / pixelScale)
 
-  def resetState(): Unit =
-    buffers.acquireWriteBuffer().reset()
-    buffers.releaseWriteBuffer()
-
-  def fetchField(): Unit =
-    buffers.acquireWriteBuffer().fetch(field, magentaLabel)
-    buffers.releaseWriteBuffer()
+  def resetState(): Unit = buffers.forWriteBuffer(_.reset())
+  def fetchField(): Unit = buffers.forWriteBuffer(_.fetch(field, magentaLabel))
 
   override def paintComponent(g: Graphics): Unit =
     super.paintComponent(g)
@@ -104,7 +98,19 @@ object FieldVisualizer:
     private var readBuffer, writeBuffer, doneBuffer = StateBuffer(w, h)
     private var readBufferBusy, anyChanges: Boolean = false
 
-    def acquireReadBuffer(): StateBuffer = synchronized:
+    inline def forReadBuffer[T](inline body: StateBuffer => T): T =
+      val buff = acquireReadBuffer()
+      val result = body(buff)
+      releaseReadBuffer()
+      result
+    
+    inline def forWriteBuffer[T](inline body: StateBuffer => T): T =
+      val buff = acquireWriteBuffer()
+      val result = body(buff)
+      releaseWriteBuffer()
+      result
+    
+    private def acquireReadBuffer(): StateBuffer = synchronized:
       assert(!readBufferBusy)
       while !anyChanges do
         wait()
@@ -116,13 +122,13 @@ object FieldVisualizer:
         readBuffer = tmp
       readBuffer
       
-    def releaseReadBuffer(): Unit = synchronized:
+    private def releaseReadBuffer(): Unit = synchronized:
       assert(readBufferBusy)
       readBufferBusy = false
       
-    def acquireWriteBuffer(): StateBuffer = synchronized(writeBuffer)
+    private def acquireWriteBuffer(): StateBuffer = synchronized(writeBuffer)
     
-    def releaseWriteBuffer(): Unit = synchronized:
+    private def releaseWriteBuffer(): Unit = synchronized:
       anyChanges = true
       notify()
       val tmp = doneBuffer
