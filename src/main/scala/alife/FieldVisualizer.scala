@@ -130,7 +130,7 @@ object FieldVisualizer:
     
     private def releaseWriteBuffer(): Unit = synchronized:
       anyChanges = true
-      notify()
       val tmp = doneBuffer
       doneBuffer = writeBuffer
       writeBuffer = tmp
+      notify()
