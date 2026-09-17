@@ -5,25 +5,21 @@ package alife
  */
 sealed trait Action:
   /**
-   * Tests whether this action can be applied for the bacterium at the given coordinates of the given field
-   * using the provided simulation constants.
-   * @param field the field.
+   * Tests whether this action can be applied for the bacterium for the given simulation.
+   * @param sim the simulation.
    * @param x the X coordinate.
    * @param y the Y coordinate.
-   * @param config the configuration that defines how simulation works.
    * @return `true` if the action can be performed, `false` otherwise.
    */
-  def canApply(field: Field, x: Int, y: Int, config: Config): Boolean
+  def canApply(sim: Simulation, x: Int, y: Int): Boolean
   
   /**
-   * Applies the action to the bacterium at the given coordinates of the given field
-   * using the provided simulation constants.
-   * @param field the field.
+   * Applies the action to the bacterium at the given coordinates for the given simulation.
+   * @param sim the simulation.
    * @param x the X coordinate.
    * @param y the Y coordinate.
-   * @param config the configuration that defines how simulation works.
    */
-  def apply(field: Field, x: Int, y: Int, config: Config): Unit
+  def apply(sim: Simulation, x: Int, y: Int): Unit
 
 /**
  * All the available actions.
@@ -34,9 +30,10 @@ object Action:
    * @param rotation the amount of rotation ticks to perform.
    */
   abstract class Rotate(rotation: Int) extends Action:
-    override def canApply(field: Field, x: Int, y: Int, config: Config): Boolean = true
-    override def apply(field: Field, x: Int, y: Int, config: Config): Unit =
-      val cell = field.getCell(x, y)
+    override def canApply(sim: Simulation, x: Int, y: Int): Boolean = true
+    override def apply(sim: Simulation, x: Int, y: Int): Unit =
+      val cell = sim.field.getCell(x, y)
+      val config = sim.config
       val e = config.rotationCost * (cell.health + cell.weight)
       cell.setIndividual(cell.individual, (cell.direction + rotation) & 3, cell.health - e)
       cell.setDebris(cell.debris + e * config.debrisFromActions)
@@ -64,10 +61,12 @@ object Action:
    * 3) This energy times `debrisFromActions` is deposited as debris.
    */
   case object Move extends Action:
-    override def canApply(field: Field, x: Int, y: Int, config: Config): Boolean =
-      field.getRelativeCell(x, y, Field.relativeLocationForward).health == 0
-    override def apply(field: Field, x: Int, y: Int, config: Config): Unit =
-      assert(canApply(field, x, y, config))
+    override def canApply(sim: Simulation, x: Int, y: Int): Boolean =
+      sim.field.getRelativeCell(x, y, Field.relativeLocationForward).health == 0
+    override def apply(sim: Simulation, x: Int, y: Int): Unit =
+      assert(canApply(sim, x, y))
+      val field = sim.field
+      val config = sim.config
       val cell = field.getCell(x, y)
       val e = config.moveCost * (cell.health + cell.weight + cell.debris)
       val g = cell.individual
@@ -88,9 +87,10 @@ object Action:
    * 4) This energy times `debrisFromActions` is deposited as debris.
    */
   case object Eat extends Action:
-    override def canApply(field: Field, x: Int, y: Int, config: Config): Boolean = true
-    override def apply(field: Field, x: Int, y: Int, config: Config): Unit =
-      val cell = field.getCell(x, y)
+    override def canApply(sim: Simulation, x: Int, y: Int): Boolean = true
+    override def apply(sim: Simulation, x: Int, y: Int): Unit =
+      val cell = sim.field.getCell(x, y)
+      val config = sim.config
       val w = cell.weight
       // how much can we eat before hitting our global limit
       val intakeLimitGlobal = w * config.healthMultiple - cell.health
@@ -112,17 +112,18 @@ object Action:
    * @param mutation the mutation operator to apply
    */
   case class Fork(mutation: Mutation) extends Action:
-    override def canApply(field: Field, x: Int, y: Int, config: Config): Boolean =
-      Move.canApply(field, x, y, config)
-    override def apply(field: Field, x: Int, y: Int, config: Config): Unit =
-      assert(canApply(field, x, y, config))
-      val cell = field.getCell(x, y)
+    override def canApply(sim: Simulation, x: Int, y: Int): Boolean =
+      Move.canApply(sim, x, y)
+    override def apply(sim: Simulation, x: Int, y: Int): Unit =
+      assert(canApply(sim, x, y))
+      val cell = sim.field.getCell(x, y)
+      val config = sim.config
       val e = config.forkCost * cell.weight
       val g = cell.individual
       val h = cell.health - e
       val d = cell.direction
       if h / 2 > 0 then
-        cell.setIndividual(mutation.mutate(g, config.random), d, h / 2)
-        Move.apply(field, x, y, config)
+        cell.setIndividual(mutation.mutate(g, sim.random), d, h / 2)
+        Move.apply(sim, x, y)
       cell.setIndividual(g, d, h / 2)
       cell.setDebris(cell.debris + e * config.debrisFromActions)

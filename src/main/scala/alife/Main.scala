@@ -55,22 +55,12 @@ object Main:
     def setValue(suffix: String): Unit = setText(prefix + suffix)
 
   @tailrec
-  private def findAndDumpIndividual(field: Field, x: Int, y: Int, d: Int): Unit =
-    if d == 11 then println("No bacterium nearby") else
-      (-d to d).view.flatMap(dx => Seq(
-        Option(field.getCellChecked(x + dx, y + d - math.abs(dx)).individual),
-        Option(field.getCellChecked(x + dx, y - d + math.abs(dx)).individual),
-      ).flatten).headOption match
-        case Some(g) => println(g.genome.mkString("IArray(", ", ", ")"))
-        case None => findAndDumpIndividual(field, x, y, d + 1)
-
-  @tailrec
-  private def drainClickQueue(queue: LinkedBlockingDeque[(Field, Field.StepStatistics) => Unit],
-                              field: Field, stats: Field.StepStatistics): Unit =
+  private def drainClickQueue(queue: LinkedBlockingDeque[(Simulation, StepStatistics) => Unit],
+                              context: Simulation, stats: StepStatistics): Unit =
     val next = queue.pollFirst()
     if next != null then
-      next.apply(field, stats)
-      drainClickQueue(queue, field, stats)
+      next.apply(context, stats)
+      drainClickQueue(queue, context, stats)
 
   def main(args: Array[String]): Unit =
     System.setProperty("awt.useSystemAAFontSettings", "on")
@@ -80,16 +70,15 @@ object Main:
     val msg = Messages(properties.getProperty("language"))
 
     val config = Config.parse(properties)
-    println(s"Info: using random factory ${config.randomFactory} and random seed ${config.randomSeed}")
     val compatibleMonster = Monsters.chooseFor(config.actions)
     
     val useSound = properties.getProperty("sound").toBoolean
     val soundFrequency = properties.getProperty("soundFrequency").toFloat
+    val soundBufferSize = properties.getProperty("soundBufferSize").toInt
     val textWidth = properties.getProperty("textWidth").toInt
     val fontSize = properties.getProperty("fontSize").toInt
 
     val pixelScale = properties.getProperty("pixelScale").toInt
-    val field = Field(config.fieldWidth, config.fieldHeight)
 
     val smallRadius = properties.getProperty("smallRadius").toInt
     val largeRadius = properties.getProperty("largeRadius").toInt
@@ -101,10 +90,8 @@ object Main:
     val fieldDelayGate = DelayGate()
     val simulationDelayGate = DelayGate()
     val labelDelayGate = DelayGate()
-
-    field.initialize(config)
     
-    val view = FieldVisualizer(field, pixelScale, fieldDelayGate)
+    val view = FieldVisualizer(config.fieldWidth, config.fieldHeight, pixelScale, fieldDelayGate)
     view.setBackground(Color.BLACK)
 
     val rightPane = JPanel()
@@ -179,7 +166,7 @@ object Main:
     
     mousePutMonster.setEnabled(compatibleMonster.nonEmpty)
 
-    val clickCommands = LinkedBlockingDeque[(Field, Field.StepStatistics) => Unit]()
+    val clickCommands = LinkedBlockingDeque[(Simulation, StepStatistics) => Unit]()
     val mouseClickGroup = ButtonGroup()
     mouseClickGroup.add(mouseDoNothing)
     mouseClickGroup.add(mouseSmallFood)
@@ -212,19 +199,19 @@ object Main:
       override def actionPerformed(e: ActionEvent): Unit =
         lastMagentaLabel += 1
         view.setMagentaLabel(lastMagentaLabel)
-        clickCommands.addLast((e, _) => e.findAndMarkLongestGenome(lastMagentaLabel))
+        clickCommands.addLast((e, _) => e.field.findAndMarkLongestGenome(lastMagentaLabel))
     }))
     val magentaMostProductive = brush(fontSize, JToggleButton(new AbstractAction(msg.highlightMaxChildren) {
       override def actionPerformed(e: ActionEvent): Unit =
         lastMagentaLabel += 1
         view.setMagentaLabel(lastMagentaLabel)
-        clickCommands.addLast((e, _) => e.findAndMarkMostProductive(lastMagentaLabel))
+        clickCommands.addLast((e, _) => e.field.findAndMarkMostProductive(lastMagentaLabel))
     }))
     val magentaFastest = brush(fontSize, JToggleButton(new AbstractAction(msg.highlightFastest) {
       override def actionPerformed(e: ActionEvent): Unit =
         lastMagentaLabel += 1
         view.setMagentaLabel(lastMagentaLabel)
-        clickCommands.addLast((e, _) => e.findAndMarkFastest(lastMagentaLabel))
+        clickCommands.addLast((e, _) => e.field.findAndMarkFastest(lastMagentaLabel))
     }))
 
     val magentaGroup = ButtonGroup()
@@ -274,38 +261,45 @@ object Main:
 
     rightPane.add(restartButton)
 
-    view.addMouseListener(new MouseAdapter {
+    val mouseClickHandler = new MouseAdapter:
       override def mouseClicked(e: MouseEvent): Unit =
         val (x, y) = view.translate(e.getX, e.getY)
         
         // FAT WARNING HERE
-        // All these actions change the state of the field (including the RNG)
+        // Almost all these actions change the state of the field (including the RNG)
         // We need to deal with it once we support replays, either by disabling this or by logging this.
-
+        
         if mouseSmallFood.isSelected then clickCommands.addLast((e, s) => e.increaseFood(x, y, smallRadius, s.maxFood * 1.05))
         if mouseLargeFood.isSelected then clickCommands.addLast((e, s) => e.increaseFood(x, y, largeRadius, s.maxFood * 1.05))
         if mouseSmallDestroy.isSelected then clickCommands.addLast((e, _) => e.eraseEverything(x, y, smallRadius))
         if mouseLargeDestroy.isSelected then clickCommands.addLast((e, _) => e.eraseEverything(x, y, largeRadius))
-        if mouseDumpGenome.isSelected then findAndDumpIndividual(field, x, y, 0)
+        if mouseDumpGenome.isSelected then clickCommands.addLast: (e, _) =>
+          e.findAndDumpClosestIndividual(x, y, 21) match
+            case Some(ind) => println(ind.genome.mkString("IArray(", ", ", ")"))
+            case None => println("No bacteria nearby")
         if mousePutMonster.isSelected then clickCommands.addLast: (e, _) =>
-          val cell = e.getCell(x, y)
+          val cell = e.field.getCell(x, y)
           val monster = Individual(compatibleMonster.get, -1)
-          cell.setIndividual(monster, config.random.nextInt(4), config.initialHealth)
-    })
+          cell.setIndividual(monster, e.random.nextInt(4), config.initialHealth)
+    
+    view.addMouseListener(mouseClickHandler)
 
     val window = JFrame(msg.title)
     window.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE)
     window.setLayout(BorderLayout())
     window.add(view, BorderLayout.CENTER)
-    if enableLegend then window.add(rightPane, if (legendIsOnRight) BorderLayout.LINE_END else BorderLayout.LINE_START)
+    if enableLegend then window.add(rightPane, if legendIsOnRight then BorderLayout.LINE_END else BorderLayout.LINE_START)
     window.setExtendedState(Frame.MAXIMIZED_BOTH)
     window.setUndecorated(true)
     window.setVisible(true)
 
-    if useSound then
-      val soundThread = Thread(new SoundWriterJob(field, DefaultSynthesizer, soundFrequency), "Sound thread")
+    val soundWriter = if useSound then
+      val job = SoundWriterJob(DefaultSynthesizer, soundFrequency, soundBufferSize)
+      val soundThread = Thread(job, "Sound thread")
       soundThread.setDaemon(true)
       soundThread.start()
+      Some(job)
+    else None
 
     fieldDelayGate.reset()
     labelDelayGate.reset()
@@ -315,26 +309,27 @@ object Main:
     labelDelayGate.setDelay(1e-3) // same
     
     @tailrec
-    def work(generation0: Int): Unit = if window.isVisible then
-      val nextGenerationNo = if restarted.getAndSet(false) then
-
+    def work(sim0: Simulation): Unit = if !window.isVisible then
+      // terminate various threads
+      soundWriter.foreach(_.clearField())
+    else  
+      val sim = if restarted.getAndSet(false) then
+        view.resetState()
         // FAT WARNING HERE
-        // The reset does not reset the RNG to its defaults, so the new run will be different even if we fix the seed.
-        // We need to deal with it once we support replays, either by disabling this or by logging this.
-        
-        field.initialize(config)
-        1
-      else generation0 + 1
-
-      val stepStats = simulationDelayGate.runOrWait(field.simulationStep(config, nextGenerationNo))
-      val effectiveFPS = 1 / simulationDelayGate.lastLeadInTime
-      val visualFPS = 1 / fieldDelayGate.lastLeadInTime
-      view.fetchField()
+        // When replays get supported, check in which way this is compatible
+        Simulation(config) 
+      else sim0
+      soundWriter.foreach(_.setField(sim.field))
       
-      drainClickQueue(clickCommands, field, stepStats)
+      val stepStats = simulationDelayGate.runOrWait(sim.simulationStep())
+      val effectiveFPS = 1.0 / simulationDelayGate.lastLeadInTime
+      val visualFPS = 1.0 / fieldDelayGate.lastLeadInTime
+      view.fetchField(sim.field)
+      
+      drainClickQueue(clickCommands, sim, stepStats)
       labelDelayGate.runOrSkip:
         SwingEx.invokeLater:
-          statTime.setValue(nextGenerationNo.toString)
+          statTime.setValue(stepStats.iteration.toString)
           statSimFPS.setValue(String.format(Locale.US, "%.2f", effectiveFPS))
           statVisFPS.setValue(String.format(Locale.US, "%.2f", visualFPS))
           statNBacteria.setValue(stepStats.numberOfBacteria.toString)
@@ -355,7 +350,7 @@ object Main:
           statMaxDistance.setValue(stepStats.maxTravelDistance.toString)
           statMaxLifeSpan.setValue(stepStats.maxLife.toString)
       
-      if autoPause > 0 && nextGenerationNo % autoPause == 0 then
+      if autoPause > 0 && stepStats.iteration % autoPause == 0 then
         SwingEx.invokeAndWait:
           executePause(true)
       
@@ -366,8 +361,8 @@ object Main:
         simulationDelayGate.reset()
       end if
 
-      work(nextGenerationNo)
+      work(sim)
     end work
     
-    work(0)
+    work(Simulation(config))
   end main

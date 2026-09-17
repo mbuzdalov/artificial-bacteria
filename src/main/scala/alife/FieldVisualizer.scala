@@ -6,16 +6,17 @@ import alife.util.Loops.*
 
 import java.awt.Graphics
 import java.awt.image.BufferedImage
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.swing.JPanel
 
-class FieldVisualizer(field: Field, pixelScale: Int, delayGate: DelayGate) extends JPanel:
-  private final val widthInPixels = field.width * pixelScale
-  private final val heightInPixels = field.height * pixelScale
+class FieldVisualizer(width: Int, height: Int, pixelScale: Int, delayGate: DelayGate) extends JPanel:
+  private final val widthInPixels = width * pixelScale
+  private final val heightInPixels = height * pixelScale
   private final val pixels = Array.ofDim[Int](widthInPixels * heightInPixels)
 
   private val image = BufferedImage(widthInPixels, heightInPixels, BufferedImage.TYPE_INT_ARGB)
   private var magentaLabel = -1
-  private val buffers = StateBuffers(field.width, field.height)
+  private val buffers = StateBuffers(width, height)
   
   private val painter = new Runnable:
     override def run(): Unit =
@@ -30,8 +31,8 @@ class FieldVisualizer(field: Field, pixelScale: Int, delayGate: DelayGate) exten
 
   def translate(x: Int, y: Int): (Int, Int) = (x / pixelScale, y / pixelScale)
 
-  def resetState(): Unit = buffers.forWriteBuffer(_.reset())
-  def fetchField(): Unit = buffers.forWriteBuffer(_.fetch(field, magentaLabel))
+  def resetState(): Unit = buffers.reset()
+  def fetchField(field: Field): Unit = buffers.forWriteBuffer(_.fetch(field, magentaLabel))
 
   override def paintComponent(g: Graphics): Unit =
     super.paintComponent(g)
@@ -42,21 +43,25 @@ object FieldVisualizer:
     private var maxDebris, maxHealth, maxFood = 0.0
     private val dhfSequence = Array.ofDim[Double](w * h * 3)
     private val magSequence = Array.ofDim[Boolean](w * h)
+    private val resetFlag = AtomicBoolean(false)
     
     private def visualConversion(a: Double): Double = math.log1p(a * (math.E - 1))
     
-    def reset(): Unit =
-      maxDebris = 0.0
-      maxHealth = 0.0
-      maxFood = 0.0
+    def reset(): Unit = resetFlag.set(true)
     
     def fetch(field: Field, magentaLabel: Int): Unit =
       require(field.width == w)
       require(field.height == h)
 
-      maxDebris *= 0.95
-      maxHealth *= 0.95
-      maxFood *= 0.95
+      if resetFlag.getAndSet(false) then
+        maxDebris = 0.0
+        maxHealth = 0.0
+        maxFood = 0.0
+      else
+        maxDebris *= 0.95
+        maxHealth *= 0.95
+        maxFood *= 0.95
+      end if
       
       var idx = 0
       loopFromUntil(0, field.height): y =>
@@ -97,7 +102,12 @@ object FieldVisualizer:
   private class StateBuffers(w: Int, h: Int):
     private var readBuffer, writeBuffer, doneBuffer = StateBuffer(w, h)
     private var readBufferBusy, anyChanges: Boolean = false
-
+    
+    def reset(): Unit =
+      readBuffer.reset()
+      writeBuffer.reset()
+      doneBuffer.reset()
+    
     inline def forReadBuffer[T](inline body: StateBuffer => T): T =
       val buff = acquireReadBuffer()
       val result = body(buff)
