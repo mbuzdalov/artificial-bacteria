@@ -1,9 +1,8 @@
 package alife
 
 import alife.Action.*
-import alife.util.Loops.loopFromUntil
+import alife.util.ChecksumSupport
 
-import java.security.MessageDigest
 import java.util.{Properties, StringTokenizer}
 import java.io.OutputStream
 
@@ -16,35 +15,15 @@ case class Config(fieldWidth: Int, fieldHeight: Int,
                   idleCost: Double, healthMultiple: Double, healthIncrementMultiple: Double,
                   spotPeriodX: Double, spotSpeedX: Double, spotPeriodY: Double, spotSpeedY: Double, spotDecay: Double,
                   actionSequence: Seq[Action]):
-  private lazy val textRepresentation =
-    s"""lifeConfigVersion = 1
-       |fieldWidth = $fieldWidth
-       |fieldHeight = $fieldHeight
-       |randomSeed = $randomSeed
-       |randomFactory = $randomFactory
-       |initialGenomeLength = $initialGenomeLength
-       |initialBacteriaProbability = $initialBacteriaProbability
-       |initialHealth = $initialHealth
-       |rotationCost = $rotationCost
-       |moveCost = $moveCost
-       |eatCost = $eatCost
-       |forkCost = $forkCost
-       |debrisDegradation = $debrisDegradation
-       |debrisToFood = $debrisToFood
-       |debrisFromActions = $debrisFromActions
-       |synthesisInit = $synthesisInit
-       |synthesisFinal = $synthesisFinal
-       |synthesisDecay = $synthesisDecay
-       |idleCost = $idleCost
-       |healthMultiple = $healthMultiple
-       |healthIncrementMultiple = $healthIncrementMultiple
-       |spotPeriodX = $spotPeriodX
-       |spotSpeedX = $spotSpeedX
-       |spotPeriodY = $spotPeriodY
-       |spotSpeedY = $spotSpeedY
-       |spotDecay = $spotDecay
-       |actionSequence = ${actionSequence.mkString(", ")}
-       |""".stripMargin.getBytes
+  /**
+   * This is a text representation of the config's contents, which is used both for checksums and for exports.
+   */
+  private lazy val textRepresentation = Config.SupportV1.computeTextRepresentation(this)
+  
+  /**
+   * @inheritdoc
+   */
+  override lazy val toString: String = "Config(" + String(textRepresentation).init.replace("\n", ", ") + ")"
   
   /**
    * List of all actions as `IArray` for performance.
@@ -66,17 +45,7 @@ case class Config(fieldWidth: Int, fieldHeight: Int,
    */
   lazy val checksum: String =
     require(randomSeed != 0, "Checksums make no sense for prototype configurations (with random seed == 0)")
-    
-    inline def appendByte(destination: StringBuilder, byte: Int): Unit =
-      destination.append(if byte < 10 then ('0' + byte).toChar else ('a' + byte - 10).toChar)
-    
-    val textRep = textRepresentation
-    val digestBytes = MessageDigest.getInstance("MD5").digest(textRep)
-    val digestString = StringBuilder()
-    loopFromUntil(0, digestBytes.length): i =>
-      appendByte(digestString, (digestBytes(i) >>> 4) & 0x0F)
-      appendByte(digestString, digestBytes(i) & 0x0F)
-    digestString.result()
+    ChecksumSupport.md5sum(textRepresentation).asString
   
   /**
    * Appends the (textual representation of) this config to the given output stream.
@@ -92,64 +61,95 @@ case class Config(fieldWidth: Int, fieldHeight: Int,
     stream.write(checkSumComponent.getBytes)
 
 object Config:
-  private def parseV1(properties: Properties, forceCheckIntegrity: Boolean): Config =
-    val actionSequenceSource = StringTokenizer(properties.getProperty("actionSequence"), " ,")
-    val actionSequence = IndexedSeq.fill[alife.Action](actionSequenceSource.countTokens()):
-      actionSequenceSource.nextToken() match
-        case s"Fork($operator)" => Fork:
-          operator match
-            case "Primitive" => Mutation.Primitive
-            case "Smooth" => Mutation.Smooth
-        case "Move" => Move
-        case "Eat" => Eat
-        case "RotatePlus" => RotatePlus
-        case "RotateMinus" => RotateMinus
-        case other => throw IllegalArgumentException(s"In 'actionSequence', unknown action '$other'")
-    if actionSequence.distinct.size != actionSequence.size then
-      throw IllegalArgumentException("Repeated elements in 'actionSequence'")
-    
-    val seed = properties.getProperty("randomSeed", "0").toLong
-    val randomFactory = properties.getProperty("randomFactory")
-    require(randomFactory != null, "Property 'randomFactory' not specified! This must name a jumpable random number generator factory. Use 'Xoshiro256PlusPlus' if unsure")
-    
-    val result = Config(
-      fieldWidth = properties.getProperty("fieldWidth").toInt,
-      fieldHeight = properties.getProperty("fieldHeight").toInt,
-      randomSeed = seed,
-      randomFactory = randomFactory,
-      initialGenomeLength = properties.getProperty("initialGenomeLength").toInt,
-      initialBacteriaProbability = properties.getProperty("initialBacteriaProbability").toDouble,
-      initialHealth = properties.getProperty("initialHealth").toDouble,
-      rotationCost = properties.getProperty("rotationCost").toDouble,
-      moveCost = properties.getProperty("moveCost").toDouble,
-      eatCost = properties.getProperty("eatCost").toDouble,
-      forkCost = properties.getProperty("forkCost").toDouble,
-      debrisDegradation = properties.getProperty("debrisDegradation").toDouble,
-      debrisToFood = properties.getProperty("debrisToFood").toDouble,
-      debrisFromActions = properties.getProperty("debrisFromActions").toDouble,
-      synthesisInit = properties.getProperty("synthesisInit").toDouble,
-      synthesisFinal = properties.getProperty("synthesisFinal").toDouble,
-      synthesisDecay = properties.getProperty("synthesisDecay").toDouble,
-      idleCost = properties.getProperty("idleCost").toDouble,
-      healthMultiple = properties.getProperty("healthMultiple").toDouble,
-      healthIncrementMultiple = properties.getProperty("healthIncrementMultiple").toDouble,
-      spotPeriodX = properties.getProperty("spotPeriodX").toDouble,
-      spotPeriodY = properties.getProperty("spotPeriodY").toDouble,
-      spotSpeedX = properties.getProperty("spotSpeedX").toDouble,
-      spotSpeedY = properties.getProperty("spotSpeedY").toDouble,
-      spotDecay = properties.getProperty("spotDecay").toDouble,
-      actionSequence = actionSequence
-    )
-    
-    val integrity = properties.getProperty("lifeConfigChecksum")
-    if forceCheckIntegrity && integrity == null then
-      throw IllegalArgumentException("Config integrity check forced, but 'lifeConfigChecksum' is not set")
-    if integrity != null && integrity != result.checksum then
-      throw IllegalArgumentException("Checksums do not match")
-    
-    result
+  private object SupportV1:
+    def computeTextRepresentation(config: Config): Array[Byte] =
+      s"""lifeConfigVersion = 1
+         |fieldWidth = ${config.fieldWidth}
+         |fieldHeight = ${config.fieldHeight}
+         |randomSeed = ${config.randomSeed}
+         |randomFactory = ${config.randomFactory}
+         |initialGenomeLength = ${config.initialGenomeLength}
+         |initialBacteriaProbability = ${config.initialBacteriaProbability}
+         |initialHealth = ${config.initialHealth}
+         |rotationCost = ${config.rotationCost}
+         |moveCost = ${config.moveCost}
+         |eatCost = ${config.eatCost}
+         |forkCost = ${config.forkCost}
+         |debrisDegradation = ${config.debrisDegradation}
+         |debrisToFood = ${config.debrisToFood}
+         |debrisFromActions = ${config.debrisFromActions}
+         |synthesisInit = ${config.synthesisInit}
+         |synthesisFinal = ${config.synthesisFinal}
+         |synthesisDecay = ${config.synthesisDecay}
+         |idleCost = ${config.idleCost}
+         |healthMultiple = ${config.healthMultiple}
+         |healthIncrementMultiple = ${config.healthIncrementMultiple}
+         |spotPeriodX = ${config.spotPeriodX}
+         |spotSpeedX = ${config.spotSpeedX}
+         |spotPeriodY = ${config.spotPeriodY}
+         |spotSpeedY = ${config.spotSpeedY}
+         |spotDecay = ${config.spotDecay}
+         |actionSequence = ${config.actionSequence.mkString(", ")}
+         |""".stripMargin.getBytes
+  
+    def parse(properties: Properties, forceCheckIntegrity: Boolean): Config =
+      val actionSequenceSource = StringTokenizer(properties.getProperty("actionSequence"), " ,")
+      val actionSequence = IndexedSeq.fill[alife.Action](actionSequenceSource.countTokens()):
+        actionSequenceSource.nextToken() match
+          case s"Fork($operator)" => Fork:
+            operator match
+              case "Primitive" => Mutation.Primitive
+              case "Smooth" => Mutation.Smooth
+          case "Move" => Move
+          case "Eat" => Eat
+          case "RotatePlus" => RotatePlus
+          case "RotateMinus" => RotateMinus
+          case other => throw IllegalArgumentException(s"In 'actionSequence', unknown action '$other'")
+      if actionSequence.distinct.size != actionSequence.size then
+        throw IllegalArgumentException("Repeated elements in 'actionSequence'")
+      
+      val seed = properties.getProperty("randomSeed", "0").toLong
+      val randomFactory = properties.getProperty("randomFactory")
+      require(randomFactory != null, "Property 'randomFactory' not specified! This must name a jumpable random number generator factory. Use 'Xoshiro256PlusPlus' if unsure")
+      
+      val result = Config(
+        fieldWidth = properties.getProperty("fieldWidth").toInt,
+        fieldHeight = properties.getProperty("fieldHeight").toInt,
+        randomSeed = seed,
+        randomFactory = randomFactory,
+        initialGenomeLength = properties.getProperty("initialGenomeLength").toInt,
+        initialBacteriaProbability = properties.getProperty("initialBacteriaProbability").toDouble,
+        initialHealth = properties.getProperty("initialHealth").toDouble,
+        rotationCost = properties.getProperty("rotationCost").toDouble,
+        moveCost = properties.getProperty("moveCost").toDouble,
+        eatCost = properties.getProperty("eatCost").toDouble,
+        forkCost = properties.getProperty("forkCost").toDouble,
+        debrisDegradation = properties.getProperty("debrisDegradation").toDouble,
+        debrisToFood = properties.getProperty("debrisToFood").toDouble,
+        debrisFromActions = properties.getProperty("debrisFromActions").toDouble,
+        synthesisInit = properties.getProperty("synthesisInit").toDouble,
+        synthesisFinal = properties.getProperty("synthesisFinal").toDouble,
+        synthesisDecay = properties.getProperty("synthesisDecay").toDouble,
+        idleCost = properties.getProperty("idleCost").toDouble,
+        healthMultiple = properties.getProperty("healthMultiple").toDouble,
+        healthIncrementMultiple = properties.getProperty("healthIncrementMultiple").toDouble,
+        spotPeriodX = properties.getProperty("spotPeriodX").toDouble,
+        spotPeriodY = properties.getProperty("spotPeriodY").toDouble,
+        spotSpeedX = properties.getProperty("spotSpeedX").toDouble,
+        spotSpeedY = properties.getProperty("spotSpeedY").toDouble,
+        spotDecay = properties.getProperty("spotDecay").toDouble,
+        actionSequence = actionSequence
+      )
+      
+      val integrity = properties.getProperty("lifeConfigChecksum")
+      if forceCheckIntegrity && integrity == null then
+        throw IllegalArgumentException("Config integrity check forced, but 'lifeConfigChecksum' is not set")
+      if integrity != null && integrity != result.checksum then
+        throw IllegalArgumentException("Checksums do not match")
+      
+      result
   
   def parse(properties: Properties, forceCheckIntegrity: Boolean = false): Config =
     properties.getProperty("lifeConfigVersion", "1") match
-      case "1" => parseV1(properties, forceCheckIntegrity)
+      case "1" => SupportV1.parse(properties, forceCheckIntegrity)
       case other => throw IllegalArgumentException(s"Unknown value for 'lifeConfigVersion': '$other'")
