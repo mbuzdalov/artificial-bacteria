@@ -3,40 +3,38 @@ package alife
 import alife.util.PseudoStack
 import alife.util.Loops.*
 
+import java.util.random.RandomGenerator.JumpableGenerator
 import java.util.random.{RandomGenerator, RandomGeneratorFactory}
 import scala.annotation.tailrec
+import scala.compiletime.uninitialized
 
 /**
  * This encapsulates the current state of the simulation and the simulation logic.
- * This is created given the (prototype) configuration and creates all other resources on its own.
- * The prototype configuration is different from the actual configuration to be used in that
- * the random seed may be set to 0, in which case the new (time-based) seed will be generated.
  *
- * @param protoConfig the prototype configuration to use.
+ * @param config the configuration to use by this simulation run.
+ * @param field the current state of the field in the simulation.
+ * @param baseRandom the jumpable random number generator to seed frame-local random generators.
  */
-class Simulation(protoConfig: Config):
-  /**
-   * The actual configuration used by this simulation run. It will always have a concrete non-zero seed.
-   */
-  val config: Config = protoConfig.withFixedSeed
-  /**
-   * The current state of the field in the simulation.
-   */
-  val field = Field(config.fieldWidth, config.fieldHeight)
-  /**
-   * The random number generator to use for all decisions related to the simulation.
-   */
-  val random: RandomGenerator = RandomGeneratorFactory.of(config.randomFactory).create(config.randomSeed)
+class Simulation private (val config: Config, val field: Field, baseRandom: JumpableGenerator):
+  private var currentFrameRandom: RandomGenerator = uninitialized
   private val callStack = PseudoStack()
   private var nIterationsPerformed = 0L
   
-  println(s"Runtime context created with random factory '${config.randomFactory}' and ${
-    if protoConfig.randomSeed == 0
-    then s"NEW time-based seed ${config.randomSeed}"
-    else s"fixed seed ${config.randomSeed}"
-  }")
-  
   initialize()
+  
+  /**
+   * Performs a deep copy of the simulation state to create a checkpoint.
+   * @return the deep copy of the simulation state.
+   */
+  def deepCopy(): Simulation =
+    new Simulation(config, field.deepCopy(), baseRandom.copy())
+  
+  /**
+   * Returns the random number generator to use for all decisions related to the simulation.
+   * Technical note: this generator is recreated before each frame starts, don't cache it.
+   * @return the random number generator
+   */
+  def random: RandomGenerator = currentFrameRandom
   
   /**
    * Returns the number of iterations performed in this simulation run.
@@ -174,7 +172,7 @@ class Simulation(protoConfig: Config):
         // because the integral of changeX * changeY over the entire field is 1/4.
         // This way, `newFoodScale` is exactly `expectedFoodPerCell` on average, which is what we want.
         val newFoodScale = expectedFoodPerCell * (sineDecay + (1 - sineDecay) * changeX * changeY * 4)
-        val newFood = newFoodScale * random.nextDouble(0, 2)
+        val newFood = newFoodScale * currentFrameRandom.nextDouble(0, 2)
         val d2e = cell.debris * config.debrisToFood
         cell.setDebris(cell.debris * debrisTotalDecay)
         cell.setFood(cell.food + d2e + newFood)
@@ -246,15 +244,17 @@ class Simulation(protoConfig: Config):
    * Initializes the field randomly as configured.
    */
   private def initialize(): Unit =
+    currentFrameRandom = baseRandom.copyAndJump()
     loopFromUntil(0, field.height): y =>
       loopFromUntil(0, field.width): x =>
         val cell = field.getCell(x, y)
         cell.setDebris(0)
         cell.setFood(1e-9)
-        if random.nextDouble() < config.initialBacteriaProbability
-        then cell.setIndividual(Individual(IArray.tabulate(config.initialGenomeLength)(i => Instruction.random(random, i)), 0),
-          random.nextInt(4),
-          config.initialHealth)
+        if currentFrameRandom.nextDouble() < config.initialBacteriaProbability
+        then cell.setIndividual(
+          individual = Individual(IArray.tabulate(config.initialGenomeLength)(i => Instruction.random(currentFrameRandom, i)), 0),
+          direction = currentFrameRandom.nextInt(4),
+          health = config.initialHealth)
         else cell.setIndividual(null, 0, 0)
   
   /**
@@ -262,8 +262,33 @@ class Simulation(protoConfig: Config):
    * @return the statistics for the step just performed.
    */
   def simulationStep(): StepStatistics =
+    currentFrameRandom = baseRandom.copyAndJump()
     nIterationsPerformed += 1
     val actionCount = performActionsOnIndividuals()
     drainIdleEnergy()
     depositFoodAndConvertDebris()
     computeStatistics(actionCount)
+
+object Simulation:
+  /**
+   * This creates a new simulation given the (prototype) configuration and creates all other resources on its own.
+   * The prototype configuration is different from the actual configuration to be used in that
+   * the random seed may be set to 0, in which case the new (time-based) seed will be generated.
+   *
+   * @param protoConfig the prototype configuration to use.
+   */
+  def apply(protoConfig: Config): Simulation =
+    val config = protoConfig.withFixedSeed
+    val result = new Simulation(
+      config = config,
+      field = Field(config.fieldWidth, config.fieldHeight),
+      baseRandom = RandomGeneratorFactory.of[JumpableGenerator](config.randomFactory).create(config.randomSeed)
+    )
+
+    println(s"Runtime context created with random factory '${config.randomFactory}' and ${
+      if protoConfig.randomSeed == 0
+      then s"NEW time-based seed ${config.randomSeed}"
+      else s"fixed seed ${config.randomSeed}"
+    }")
+    
+    result

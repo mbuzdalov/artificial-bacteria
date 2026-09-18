@@ -17,6 +17,18 @@ case class Individual(genome: IArray[Instruction], label: Int):
   private var myNecessaryInstructions: Int = -1
   
   /**
+   * Creates a deep copy of this individual with all the internal fields. Used for checkpointing.
+   * @return the deep copy of this individual.
+   */
+  def deepCopy(): Individual =
+    val result = Individual(genome, label)
+    result.myLifeSpan = this.myLifeSpan
+    result.myChildren = this.myChildren
+    result.myTravelDistance = this.myTravelDistance
+    result.myNecessaryInstructions = this.myNecessaryInstructions
+    result
+  
+  /**
    * Computes the number of necessary instructions for this genome, given the configuration.
    * An instruction is defined to be necessary if at least one of the action outputs depends on this instruction.
    * This number is cached in the individual because the config remains the same throughout the simulation.

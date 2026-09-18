@@ -12,6 +12,15 @@ class Field(val width: Int, val height: Int):
   private val cells = Array.tabulate(height, width)((y, x) => Field.Cell(x, y, this))
   private val sumDistancesL, sumDistancesR = Array.ofDim[Int](height)
 
+  def deepCopy(): Field =
+    val result = Field(width, height)
+    System.arraycopy(sumDistancesL, 0, result.sumDistancesL, 0, sumDistancesL.length)
+    System.arraycopy(sumDistancesR, 0, result.sumDistancesR, 0, sumDistancesR.length)
+    loopFromUntil(0, height): y =>
+      loopFromUntil(0, width): x =>
+        result.cells(y)(x).copyFrom(cells(y)(x))
+    result    
+  
   def getCell(x: Int, y: Int): Field.Cell = cells(y)(x)
 
   def getCellChecked(x: Int, y: Int): Field.Cell =
@@ -75,17 +84,28 @@ object Field:
     
     def setFood(value: Double): Unit = _food = value
     def setDebris(value: Double): Unit = _debris = value
-    def setIndividual(g: Individual, d: Int, h: Double): Unit =
+    def setIndividual(individual: Individual, direction: Int, health: Double): Unit =
       if _individual != null then
         f.sumDistancesL(y) -= x
         f.sumDistancesR(y) -= f.width - 1 - x
-      if h < 0 || g == null then
+      if health < 0 || individual == null then
         _individual = null
         _health = 0
         _direction = 0
       else
-        _individual = g
-        _health = h
-        _direction = d
+        _individual = individual
+        _health = health
+        _direction = direction
         f.sumDistancesL(y) += x
         f.sumDistancesR(y) += f.width - 1 - x
+    end setIndividual
+
+    def copyFrom(that: Cell): Unit =
+      _food = that._food
+      _debris = that._debris
+      _health = that._health
+      _direction = that._direction
+      _individual = that._individual.deepCopy()
+    end copyFrom
+  end Cell
+end Field
