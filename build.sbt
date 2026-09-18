@@ -6,3 +6,7 @@ lazy val main = project
             organization := "com.github.mbuzdalov",
             scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked"),
   )
+
+libraryDependencies ++= Seq(
+  "org.scalatest" %% "scalatest" % "3.2.20" % Test, // for unit testing
+)

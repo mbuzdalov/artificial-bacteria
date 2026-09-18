@@ -26,7 +26,8 @@ with the maximum potential is taken.
 The project is written in Scala, the current version is `3.9.0`.
 Scala itself runs on a Java virtual machine. Java versions from `21` to `26` have been tested.
 For the user interface, the project uses Swing, and for sound the `javax.sound.sampled`
-infrastructure is used. Other than the standard libraries, the project has no dependencies.
+infrastructure is used. The project has the following dependencies:
+- ScalaTest: for unit testing.
 
 The project uses `sbt`. To start, type `sbt run` in the console.
 A rather elaborate configuration is available in `config.properties`
