@@ -17,7 +17,8 @@ import scala.compiletime.uninitialized
  */
 class Simulation private (val config: Config, val field: Field, baseRandom: JumpableGenerator):
   private var currentFrameRandom: RandomGenerator = uninitialized
-  private val callStack = PseudoStack()
+  private val callStack = PseudoStack() /* "volatile", do not copy */
+  private val sineCache = Array.ofDim[Double](field.width) /* "volatile", do not copy */
   private var nIterationsPerformed = 0L
   private var nAliveBacteria = 0
   
@@ -165,18 +166,29 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     val spotXScale = pi2 * config.spotPeriodX / field.width
     val spotYScale = pi2 * config.spotPeriodY / field.height
     
+    loopFromUntil(0, field.width): x =>
+      sineCache(x) = (math.sin(x * spotXScale + spotXOffset) + 1) / 2
+
+    val expectedFoodPerCellTimes2 = expectedFoodPerCell * 2
     val debrisTotalDecay = math.max(0, 1 - config.debrisDegradation - config.debrisToFood)
     loopFromUntil(0, field.height): y =>
-      // this is in [0;1]
       val changeY = (math.sin(y * spotYScale + spotYOffset) + 1) / 2
+      // This is what to multiply changeX by for newFoodScale.
+      // See commends for the formula for newFoodScale below.
+      val newFoodMultiple = (1 - sineDecay) * changeY * 4
       loopFromUntil(0, field.width): x =>
-        val changeX = (math.sin(x * spotXScale + spotXOffset) + 1) / 2
+        val changeX = sineCache(x)
         val cell = field.getCell(x, y)
+        // What used to be here is:
+        //   val newFoodScale = expectedFoodPerCell * (sineDecay + (1 - sineDecay) * changeX * changeY * 4)
         // The product of changes is additionally multiplied by 4,
         // because the integral of changeX * changeY over the entire field is 1/4.
         // This way, `newFoodScale` is exactly `expectedFoodPerCell` on average, which is what we want.
-        val newFoodScale = expectedFoodPerCell * (sineDecay + (1 - sineDecay) * changeX * changeY * 4)
-        val newFood = newFoodScale * currentFrameRandom.nextDouble(0, 2)
+        //
+        // Now, we compute the same thing, but expectedFoodPerCell is moved to scaling nextDouble,
+        // and different parts are computed at different times
+        val newFoodScale = sineDecay + newFoodMultiple * changeX
+        val newFood = newFoodScale * currentFrameRandom.nextDouble(0, expectedFoodPerCellTimes2)
         val d2e = cell.debris * config.debrisToFood
         cell.setDebris(cell.debris * debrisTotalDecay)
         cell.setFood(cell.food + d2e + newFood)
