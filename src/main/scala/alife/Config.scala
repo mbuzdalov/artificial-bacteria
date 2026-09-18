@@ -19,7 +19,7 @@ case class Config(fieldWidth: Int, fieldHeight: Int,
     else copy(randomSeed = System.nanoTime())
 
 object Config:
-  def parse(properties: Properties): Config =
+  private def parseV1(properties: Properties): Config =
     val actionSequenceSource = StringTokenizer(properties.getProperty("actionSequence"), " ,")
     val actionSequence = IArray.fill[alife.Action](actionSequenceSource.countTokens()):
       actionSequenceSource.nextToken() match
@@ -67,3 +67,8 @@ object Config:
       spotDecay = properties.getProperty("spotDecay").toDouble,
       actions = actionSequence
     )
+  
+  def parse(properties: Properties): Config =
+    properties.getProperty("lifeConfigVersion", "1") match
+      case "1" => parseV1(properties)
+      case other => throw IllegalArgumentException(s"Unknown value for 'lifeConfigVersion': '$other'")
