@@ -39,7 +39,7 @@ object Mutation:
         case 2 =>
           val (h, t) = genome.splitAt(rng.nextInt(1 + genome.size))
           (h :+ Instruction.random(rng, h.size)) ++ t
-        case _ => throw new AssertionError()
+        case _ => throw AssertionError()
       Individual(newGenome, individual.label)
   
   /**
@@ -70,5 +70,5 @@ object Mutation:
             // indices above `i + 1` need a +1
             Instruction.mapArguments(a => if a > i then a + 1 else a)(v)
           (h :+ Instruction.random(rng, h.size)) ++ newTail
-        case _ => throw new AssertionError()
+        case _ => throw AssertionError()
       Individual(newGenome, individual.label)
