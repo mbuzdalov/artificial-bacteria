@@ -2,7 +2,6 @@ package alife
 
 import alife.Action.*
 
-import java.util.random.RandomGeneratorFactory
 import java.util.{Properties, StringTokenizer}
 
 case class Config(fieldWidth: Int, fieldHeight: Int,
@@ -14,8 +13,8 @@ case class Config(fieldWidth: Int, fieldHeight: Int,
                   idleCost: Double, healthMultiple: Double, healthIncrementMultiple: Double,
                   spotPeriodX: Double, spotSpeedX: Double, spotPeriodY: Double, spotSpeedY: Double, spotDecay: Double,
                   actions: IArray[Action]):
-  def withFixedSeed: Config = 
-    if randomSeed != 0 
+  def withFixedSeed: Config =
+    if randomSeed != 0
     then this
     else copy(randomSeed = System.nanoTime())
 
@@ -37,7 +36,8 @@ object Config:
       throw IllegalArgumentException("Repeated elements in 'actionSequence'")
     
     val seed = properties.getProperty("randomSeed", "0").toLong
-    val randomFactory = properties.getProperty("randomFactory", RandomGeneratorFactory.getDefault.name())
+    val randomFactory = properties.getProperty("randomFactory")
+    require(randomFactory != null, "Property 'randomFactory' not specified! This must name a jumpable random number generator factory. Use 'Xoshiro256PlusPlus' if unsure")
     
     Config(
       fieldWidth = properties.getProperty("fieldWidth").toInt,
