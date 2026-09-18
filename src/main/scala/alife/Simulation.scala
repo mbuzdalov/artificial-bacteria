@@ -28,7 +28,10 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
    * @return the deep copy of the simulation state.
    */
   def deepCopy(): Simulation =
-    new Simulation(config, field.deepCopy(), baseRandom.copy())
+    val result = new Simulation(config, field.deepCopy(), baseRandom.copy())
+    result.nIterationsPerformed = nIterationsPerformed
+    result.nAliveBacteria = nAliveBacteria
+    result
   
   /**
    * Returns the random number generator to use for all decisions related to the simulation.
