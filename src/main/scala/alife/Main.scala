@@ -351,9 +351,11 @@ object Main:
       drainClickQueue(clickCommands, sim, stepStats)
       labelDelayGate.runOrSkip:
         SwingEx.invokeLater:
+          def displayDouble(v: Double): String = if v.isNaN then "--" else String.format(Locale.US, "%.2f", v)
+          
           statTime.setValue(stepStats.iteration.toString)
-          statSimFPS.setValue(String.format(Locale.US, "%.2f", effectiveFPS))
-          statVisFPS.setValue(String.format(Locale.US, "%.2f", visualFPS))
+          statSimFPS.setValue(displayDouble(effectiveFPS))
+          statVisFPS.setValue(displayDouble(visualFPS))
           statNBacteria.setValue(stepStats.numberOfBacteria.toString)
           statMaxGenome.setValue(stepStats.maxGenomeSize.toString)
   
@@ -361,13 +363,13 @@ object Main:
             actionStats(i).setValue(stepStats.actionCounts(i).toString)
   
           statNMonsters.setValue(stepStats.nMonsters.toString)
-          statAverageHealth.setValue(String.format(Locale.US, "%.2f", stepStats.averageHealth))
-          statAverageGenome.setValue(String.format(Locale.US, "%.2f", stepStats.averageGenomeSize))
-          statAverageInstructions.setValue(String.format(Locale.US, "%.2f", stepStats.avgNecessaryInstructions))
-          statAverageInstrRatio.setValue(String.format(Locale.US, "%.2f", stepStats.avgNecessaryInstructionRatio))
-          statMaxHealth.setValue(String.format(Locale.US, "%.2f", stepStats.maximalHealth))
-          statSumEnergy.setValue(String.format(Locale.US, "%.2f", stepStats.totalFood))
-          statMaxSpeed.setValue(String.format(Locale.US, "%.2f", stepStats.maxSpeed))
+          statAverageHealth.setValue(displayDouble(stepStats.averageHealth))
+          statAverageGenome.setValue(displayDouble(stepStats.averageGenomeSize))
+          statAverageInstructions.setValue(displayDouble(stepStats.avgNecessaryInstructions))
+          statAverageInstrRatio.setValue(displayDouble(stepStats.avgNecessaryInstructionRatio))
+          statMaxHealth.setValue(displayDouble(stepStats.maximalHealth))
+          statSumEnergy.setValue(displayDouble(stepStats.totalFood))
+          statMaxSpeed.setValue(displayDouble(stepStats.maxSpeed))
           statMaxChildren.setValue(stepStats.maxChildren.toString)
           statMaxDistance.setValue(stepStats.maxTravelDistance.toString)
           statMaxLifeSpan.setValue(stepStats.maxLife.toString)
