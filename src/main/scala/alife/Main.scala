@@ -309,16 +309,15 @@ object Main:
     labelDelayGate.setDelay(1e-3) // same
     
     @tailrec
-    def work(sim0: Simulation): Unit = if !window.isVisible then
+    def work(sim: Simulation): Unit = if !window.isVisible then
       // terminate various threads
       soundWriter.foreach(_.clearField())
-    else  
-      val sim = if restarted.getAndSet(false) then
-        view.resetState()
-        // FAT WARNING HERE
-        // When replays get supported, check in which way this is compatible
-        Simulation(config) 
-      else sim0
+    else if restarted.getAndSet(false) then
+      view.resetState()
+      // FAT WARNING HERE
+      // When replays get supported, check in which way this is compatible
+      work(Simulation(config))
+    else 
       soundWriter.foreach(_.setField(sim.field))
       
       val stepStats = simulationDelayGate.runOrWait(sim.simulationStep())
