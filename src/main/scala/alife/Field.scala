@@ -49,7 +49,7 @@ class Field(val width: Int, val height: Int):
     forEachIndividual((_, ind) => t = o.max(t, fun(ind)))
     forEachIndividual: (c, ind) =>
       if o.equiv(t, fun(ind)) then
-        c.setIndividual(ind.copy(label = label), c.direction, c.health)
+        c.setIndividual(ind.relabel(label), c.direction, c.health)
 
   private inline def forEachIndividual(inline fun: (Field.Cell, Individual) => Unit): Unit =
     loopFromUntil(0, height): y =>

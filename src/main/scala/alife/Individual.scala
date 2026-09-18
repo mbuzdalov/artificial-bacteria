@@ -16,17 +16,26 @@ case class Individual(genome: IArray[Instruction], label: Int):
   private var myTravelDistance: Int = 0
   private var myNecessaryInstructions: Int = -1
   
+  private def copyPrivateVariablesFrom(that: Individual): Individual =
+    myLifeSpan = that.myLifeSpan
+    myChildren = that.myChildren
+    myTravelDistance = that.myTravelDistance
+    myNecessaryInstructions = that.myNecessaryInstructions
+    this
+  
+  /**
+   * Creates a copy of this individual, including all the internal fields, except for the label,
+   * for which the new value is given.
+   * @param newLabel the new label value.
+   * @return the relabeled copy of this individual.
+   */  
+  def relabel(newLabel: Int): Individual = Individual(genome, newLabel).copyPrivateVariablesFrom(this)
+  
   /**
    * Creates a deep copy of this individual with all the internal fields. Used for checkpointing.
    * @return the deep copy of this individual.
    */
-  def deepCopy(): Individual =
-    val result = Individual(genome, label)
-    result.myLifeSpan = this.myLifeSpan
-    result.myChildren = this.myChildren
-    result.myTravelDistance = this.myTravelDistance
-    result.myNecessaryInstructions = this.myNecessaryInstructions
-    result
+  def deepCopy(): Individual = Individual(genome, label).copyPrivateVariablesFrom(this)
   
   /**
    * Computes the number of necessary instructions for this genome, given the configuration.
