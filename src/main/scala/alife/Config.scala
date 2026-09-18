@@ -68,13 +68,13 @@ case class Config(fieldWidth: Int, fieldHeight: Int,
     require(randomSeed != 0, "Checksums make no sense for prototype configurations (with random seed == 0)")
     
     inline def appendByte(destination: StringBuilder, byte: Int): Unit =
-      destination.append(if byte < 10 then ('0' + byte).toChar else ('A' + byte - 10).toChar)
+      destination.append(if byte < 10 then ('0' + byte).toChar else ('a' + byte - 10).toChar)
     
     val textRep = textRepresentation
     val digestBytes = MessageDigest.getInstance("MD5").digest(textRep)
     val digestString = StringBuilder()
     loopFromUntil(0, digestBytes.length): i =>
-      appendByte(digestString, (digestBytes(i) >>> 8) & 0x0F)
+      appendByte(digestString, (digestBytes(i) >>> 4) & 0x0F)
       appendByte(digestString, digestBytes(i) & 0x0F)
     digestString.result()
   
