@@ -19,6 +19,7 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
   private var currentFrameRandom: RandomGenerator = uninitialized
   private val callStack = PseudoStack()
   private var nIterationsPerformed = 0L
+  private var nAliveBacteria = 0
   
   initialize()
   
@@ -191,7 +192,6 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     var maxGenomeSize = 0
     var sumGenomeSizes = 0L
     var nMonsters = 0
-    var nBacteria = 0
     
     var maxLifeSpan = 0
     var maxChildren = 0
@@ -200,6 +200,8 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     
     var sumNecessaryInstructions = 0
     var sumNecessaryInstructionRates = 0.0
+
+    nAliveBacteria = 0
     
     loopFromUntil(0, field.height): y =>
       loopFromUntil(0, field.width): x =>
@@ -208,7 +210,7 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
         maxFood = math.max(maxFood, cell.food)
         val ind = cell.individual
         if ind != null then
-          nBacteria += 1
+          nAliveBacteria += 1
           sumHealths += cell.health
           maxHealth = math.max(maxHealth, cell.health)
           if ind.label < 0 then nMonsters += 1
@@ -224,9 +226,9 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     StepStatistics(
       iteration = nIterationsPerformed,
       maxGenomeSize = maxGenomeSize,
-      averageGenomeSize = sumGenomeSizes.toDouble / math.max(1, nBacteria),
-      numberOfBacteria = nBacteria,
-      averageHealth = sumHealths / math.max(1, nBacteria),
+      averageGenomeSize = sumGenomeSizes.toDouble / nAliveBacteria,
+      numberOfBacteria = nAliveBacteria,
+      averageHealth = sumHealths / nAliveBacteria,
       maximalHealth = maxHealth,
       totalFood = totalFood,
       maxFood = maxFood,
@@ -236,8 +238,8 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
       maxTravelDistance = maxDistance,
       maxSpeed = maxSpeed,
       nMonsters = nMonsters,
-      avgNecessaryInstructions = sumNecessaryInstructions.toDouble / nBacteria,
-      avgNecessaryInstructionRatio = sumNecessaryInstructionRates / nBacteria,
+      avgNecessaryInstructions = sumNecessaryInstructions.toDouble / nAliveBacteria,
+      avgNecessaryInstructionRatio = sumNecessaryInstructionRates / nAliveBacteria,
     )
   
   /**
@@ -251,10 +253,12 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
         cell.setDebris(0)
         cell.setFood(1e-9)
         if currentFrameRandom.nextDouble() < config.initialBacteriaProbability
-        then cell.setIndividual(
-          individual = Individual(IArray.tabulate(config.initialGenomeLength)(i => Instruction.random(currentFrameRandom, i)), 0),
-          direction = currentFrameRandom.nextInt(4),
-          health = config.initialHealth)
+        then
+          cell.setIndividual(
+            individual = Individual(IArray.tabulate(config.initialGenomeLength)(i => Instruction.random(currentFrameRandom, i)), 0),
+            direction = currentFrameRandom.nextInt(4),
+            health = config.initialHealth)
+          nAliveBacteria += 1
         else cell.setIndividual(null, 0, 0)
   
   /**
@@ -268,6 +272,12 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     drainIdleEnergy()
     depositFoodAndConvertDebris()
     computeStatistics(actionCount)
+  
+  /**
+   * Returns whether simulation can continue.
+   * @return whether simulation can continue.
+   */
+  def canContinue: Boolean = nAliveBacteria > 0
 
 object Simulation:
   /**

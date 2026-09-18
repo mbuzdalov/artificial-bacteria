@@ -4,6 +4,7 @@ trait Messages:
   def title: String
   def pause: String
   def resume: String
+  def finished: String
   def restart: String
 
   def legend: String
@@ -56,6 +57,7 @@ object Messages:
     override def title: String = "Artificial Bacteria"
     override def pause: String = "PAUSE"
     override def resume: String = "RESUME"
+    override def finished: String = "FINISHED"
     override def restart: String = "BEGIN ANEW"
 
     override def legend: String = "Legend:"

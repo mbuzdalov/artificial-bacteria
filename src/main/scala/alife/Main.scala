@@ -233,16 +233,29 @@ object Main:
     val pauseButton = JButton(msg.pause)
     val paused = AtomicBoolean(false)
     
-    def executePause(newPaused: Boolean): Unit =
-      paused.set(newPaused)
-      pauseButton.setText(if newPaused then msg.resume else msg.pause) // the next action of the button is inverted
+    enum PausedState:
+      case Running, Paused, Finished
+    
+    def executePause(newPaused: PausedState): Unit = newPaused match
+      case PausedState.Running =>
+        paused.set(false)
+        pauseButton.setText(msg.pause)
+        pauseButton.setEnabled(true)
+      case PausedState.Paused =>
+        paused.set(true)
+        pauseButton.setText(msg.resume)
+        pauseButton.setEnabled(true)
+      case PausedState.Finished =>
+        paused.set(true)
+        pauseButton.setText(msg.finished)
+        pauseButton.setEnabled(false)
     
     pauseButton.setBackground(Color.BLUE.darker().darker())
     pauseButton.setForeground(Color.WHITE)
     pauseButton.setFont(pauseButton.getFont.deriveFont(fontSize.toFloat * 2))
     pauseButton.setAlignmentX(Component.LEFT_ALIGNMENT)
     pauseButton.addActionListener: ev =>
-      executePause(!paused.get())
+      executePause(if paused.get() then PausedState.Running else PausedState.Paused)
     
     rightPane.add(pauseButton)
     
@@ -257,7 +270,7 @@ object Main:
       mouseDoNothing.setSelected(true)
       magentaMonster.setSelected(true)
       restarted.set(true)
-      executePause(false)
+      executePause(PausedState.Running)
 
     rightPane.add(restartButton)
 
@@ -308,6 +321,12 @@ object Main:
     fieldDelayGate.setDelay(1e-3) // somewhat of a failsafe: the actual FPS on a commodity display cannot be 1000
     labelDelayGate.setDelay(1e-3) // same
     
+    inline def waitUntilUnpausedOrDead(): Unit =
+      while paused.get() && window.isVisible do Thread.sleep(100)
+      fieldDelayGate.reset()
+      labelDelayGate.reset()
+      simulationDelayGate.reset()
+    
     @tailrec
     def work(sim: Simulation): Unit = if !window.isVisible then
       // terminate various threads
@@ -317,7 +336,11 @@ object Main:
       // FAT WARNING HERE
       // When replays get supported, check in which way this is compatible
       work(Simulation(config))
-    else 
+    else if !sim.canContinue then
+      executePause(PausedState.Finished)
+      waitUntilUnpausedOrDead()
+      work(null) // logic on what to do after this method quits is written above; `null` just in case
+    else
       soundWriter.foreach(_.setField(sim.field))
       
       val stepStats = simulationDelayGate.runOrWait(sim.simulationStep())
@@ -351,14 +374,9 @@ object Main:
       
       if autoPause > 0 && stepStats.iteration % autoPause == 0 then
         SwingEx.invokeAndWait:
-          executePause(true)
+          executePause(PausedState.Paused)
       
-      if paused.get() then
-        while paused.get() && window.isVisible do Thread.sleep(100)
-        fieldDelayGate.reset()
-        labelDelayGate.reset()
-        simulationDelayGate.reset()
-      end if
+      if paused.get() then waitUntilUnpausedOrDead()
 
       work(sim)
     end work
