@@ -70,9 +70,9 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     loopFromTo(-radius, radius): xi =>
       loopFromTo(-radius, radius): yi =>
         if xi * xi + yi * yi <= radius * radius then
-          val cell = field.getCellChecked(x + xi, y + yi)
-          val oldFood = cell.food
-          cell.setFood(oldFood + (targetAmount - oldFood) * 0.5)
+          val sq = field.getSquareChecked(x + xi, y + yi)
+          val oldFood = sq.food
+          sq.setFood(oldFood + (targetAmount - oldFood) * 0.5)
   
   /**
    * When called, erases everything (individuals, food, debris) in the specified circle.
@@ -85,7 +85,7 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     loopFromTo(-radius, radius): xi =>
       loopFromTo(-radius, radius): yi =>
         if xi * xi + yi * yi <= radius * radius then
-          field.getCellChecked(x + xi, y + yi).eraseEverything()
+          field.getSquareChecked(x + xi, y + yi).eraseEverything()
   
   /**
    * Returns an individual closest to (`x`, `y`) at a distance not bigger than `maxDist`. If there are multiple such
@@ -98,8 +98,8 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     @tailrec def impl(d: Int): Option[Individual] =
       if d > maxDistance then None else
         (-d to d).view.flatMap(dx => Seq(
-          Option(field.getCellChecked(x + dx, y + d - math.abs(dx)).individual),
-          Option(field.getCellChecked(x + dx, y - d + math.abs(dx)).individual),
+          Option(field.getSquareChecked(x + dx, y + d - math.abs(dx)).individual),
+          Option(field.getSquareChecked(x + dx, y - d + math.abs(dx)).individual),
         ).flatten).headOption match
           case Some(g) => Some(g)
           case None => impl(d + 1)
@@ -116,8 +116,8 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     
     loopFromUntil(0, field.height): y =>
       loopFromUntil(0, field.width): x =>
-        val cell = field.getCell(x, y)
-        val ind = cell.individual
+        val sq = field.getSquare(x, y)
+        val ind = sq.individual
         if ind != null then
           val g = ind.genome
           callStack.clear()
@@ -149,14 +149,14 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
   private def drainIdleEnergy(): Unit =
     loopFromUntil(0, field.height): y =>
       loopFromUntil(0, field.width): x =>
-        val cell = field.getCell(x, y)
-        if cell.individual != null then
-          val ind = cell.removeIndividual()
+        val sq = field.getSquare(x, y)
+        if sq.individual != null then
+          val ind = sq.removeIndividual()
           val spentForLiving = math.min(config.idleCost, ind.health)
-          cell.setDebris(cell.debris + spentForLiving * config.debrisFromActions)
+          sq.setDebris(sq.debris + spentForLiving * config.debrisFromActions)
           ind.setHealth(ind.health - config.idleCost)
           if ind.health >= 0
-          then cell.setIndividual(ind)
+          then sq.setIndividual(ind)
           else recordBacteriumDeath(ind)
   
   /**
@@ -167,10 +167,10 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     val synthDecay = math.exp(-nIterationsPerformed * config.synthesisDecay) // initially 1, then decreases to 0
     val sineDecay = math.exp(-nIterationsPerformed * config.spotDecay) // initially 1, then decreases to 0
     
-    // This is the average expected energy to deposit onto a cell.
+    // This is the average expected energy to deposit onto a square.
     // "Average" means it can go up and down, currently in a periodic way.
-    // "Expected" means that the actual deposited amount is sampled u.a.r. from [0; the value determined for the cell].
-    val expectedFoodPerCell = synthDecay * config.synthesisInit + (1 - synthDecay) * config.synthesisFinal
+    // "Expected" means that the actual deposited amount is sampled u.a.r. from [0; the value determined for the square].
+    val expectedFoodPerSquare = synthDecay * config.synthesisInit + (1 - synthDecay) * config.synthesisFinal
     
     val pi2 = 2 * math.Pi
     val spotXOffset = pi2 * nIterationsPerformed * config.spotSpeedX
@@ -181,7 +181,7 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     loopFromUntil(0, field.width): x =>
       sineCache(x) = (math.sin(x * spotXScale + spotXOffset) + 1) / 2
 
-    val expectedFoodPerCellTimes2 = expectedFoodPerCell * 2
+    val expectedFoodPerSquareTimes2 = expectedFoodPerSquare * 2
     val debrisTotalDecay = math.max(0, 1 - config.debrisDegradation - config.debrisToFood)
     loopFromUntil(0, field.height): y =>
       val changeY = (math.sin(y * spotYScale + spotYOffset) + 1) / 2
@@ -190,20 +190,20 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
       val newFoodMultiple = (1 - sineDecay) * changeY * 4
       loopFromUntil(0, field.width): x =>
         val changeX = sineCache(x)
-        val cell = field.getCell(x, y)
+        val sq = field.getSquare(x, y)
         // What used to be here is:
-        //   val newFoodScale = expectedFoodPerCell * (sineDecay + (1 - sineDecay) * changeX * changeY * 4)
+        //   val newFoodScale = expectedFoodPerSquare * (sineDecay + (1 - sineDecay) * changeX * changeY * 4)
         // The product of changes is additionally multiplied by 4,
         // because the integral of changeX * changeY over the entire field is 1/4.
-        // This way, `newFoodScale` is exactly `expectedFoodPerCell` on average, which is what we want.
+        // This way, `newFoodScale` is exactly `expectedFoodPerSquare` on average, which is what we want.
         //
-        // Now, we compute the same thing, but expectedFoodPerCell is moved to scaling nextDouble,
+        // Now, we compute the same thing, but expectedFoodPerSquare is moved to scaling nextDouble,
         // and different parts are computed at different times
         val newFoodScale = sineDecay + newFoodMultiple * changeX
-        val newFood = newFoodScale * currentFrameRandom.nextDouble(0, expectedFoodPerCellTimes2)
-        val d2e = cell.debris * config.debrisToFood
-        cell.setDebris(cell.debris * debrisTotalDecay)
-        cell.setFood(cell.food + d2e + newFood)
+        val newFood = newFoodScale * currentFrameRandom.nextDouble(0, expectedFoodPerSquareTimes2)
+        val d2e = sq.debris * config.debrisToFood
+        sq.setDebris(sq.debris * debrisTotalDecay)
+        sq.setFood(sq.food + d2e + newFood)
   
   /**
    * This computes all statistics defined in `StepStatistics` for the current state of the field,
@@ -232,7 +232,7 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     
     loopFromUntil(0, field.height): y =>
       loopFromUntil(0, field.width): x =>
-        val cell = field.getCell(x, y)
+        val cell = field.getSquare(x, y)
         totalFood += cell.food
         maxFood = math.max(maxFood, cell.food)
         val ind = cell.individual
@@ -278,7 +278,7 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     currentFrameRandom = baseRandom.copyAndJump()
     loopFromUntil(0, field.height): y =>
       loopFromUntil(0, field.width): x =>
-        val cell = field.getCell(x, y)
+        val cell = field.getSquare(x, y)
         cell.eraseEverything()
         cell.setFood(1e-9)
         if currentFrameRandom.nextDouble() < config.initialBacteriaProbability then

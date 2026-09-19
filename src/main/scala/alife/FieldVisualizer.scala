@@ -66,18 +66,18 @@ object FieldVisualizer:
       var idx = 0
       loopFromUntil(0, field.height): y =>
         loopFromUntil(0, field.width): x =>
-          val cell = field.getCell(x, y)
-          val ind = cell.individual
+          val sq = field.getSquare(x, y)
+          val ind = sq.individual
           val health = if ind != null then ind.health else 0.0
           val i3 = idx * 3
-          dhfSequence(i3) = cell.debris
+          dhfSequence(i3) = sq.debris
           dhfSequence(i3 + 1) = health
-          dhfSequence(i3 + 2) = cell.food
+          dhfSequence(i3 + 2) = sq.food
           magSequence(idx) = ind != null && ind.label == magentaLabel
           idx += 1
-          maxDebris = math.max(maxDebris, cell.debris)
+          maxDebris = math.max(maxDebris, sq.debris)
           maxHealth = math.max(maxHealth, health)
-          maxFood = math.max(maxFood, cell.food)
+          maxFood = math.max(maxFood, sq.food)
 
     def upload(image: BufferedImage, pixelScale: Int, pixels: Array[Int], component: JPanel): Unit =
       val widthInPixels = w * pixelScale

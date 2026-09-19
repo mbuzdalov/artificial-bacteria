@@ -291,9 +291,9 @@ object Main:
             case Some(ind) => println(ind.genome.mkString("IArray(", ", ", ")"))
             case None => println("No bacteria nearby")
         if mousePutMonster.isSelected then clickCommands.addLast: (e, _) =>
-          val cell = e.field.getCell(x, y)
+          val sq = e.field.getSquare(x, y)
           val monster = e.createBacterium(compatibleMonster.get, -1, config.initialHealth, e.random.nextInt(4))
-          cell.setIndividual(monster)
+          sq.setIndividual(monster)
     
     view.addMouseListener(mouseClickHandler)
 

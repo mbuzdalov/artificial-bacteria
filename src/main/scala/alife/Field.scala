@@ -8,8 +8,8 @@ import scala.compiletime.uninitialized
  * A class for a field where bacteria live.
  */
 class Field(val width: Int, val height: Int):
-  // cells stores the contents row first to align the access patterns with the screen buffers
-  private val cells = Array.tabulate(height, width)((y, x) => Field.Cell(x, y, this))
+  // squares stores the contents row first to align the access patterns with the screen buffers
+  private val squares = Array.tabulate(height, width)((y, x) => Field.Square(x, y, this))
   private val sumDistancesL, sumDistancesR = Array.ofDim[Int](height)
 
   def deepCopy(): Field =
@@ -18,24 +18,24 @@ class Field(val width: Int, val height: Int):
     System.arraycopy(sumDistancesR, 0, result.sumDistancesR, 0, sumDistancesR.length)
     loopFromUntil(0, height): y =>
       loopFromUntil(0, width): x =>
-        result.cells(y)(x).copyFrom(cells(y)(x))
+        result.squares(y)(x).copyFrom(squares(y)(x))
     result    
   
-  def getCell(x: Int, y: Int): Field.Cell = cells(y)(x)
+  def getSquare(x: Int, y: Int): Field.Square = squares(y)(x)
 
-  def getCellChecked(x: Int, y: Int): Field.Cell =
+  def getSquareChecked(x: Int, y: Int): Field.Square =
     val x0 = (x % width + width) % width
     val y0 = (y % height + height) % height
-    getCell(x0, y0)
+    getSquare(x0, y0)
   
-  def getRelativeCell(x: Int, y: Int, relativeLocation: Int): Field.Cell =
-    val dirFW = cells(y)(x).individual.direction
+  def getRelativeSquare(x: Int, y: Int, relativeLocation: Int): Field.Square =
+    val dirFW = squares(y)(x).individual.direction
     val dirLF = (dirFW + 1) & 3
     val scaleFW = Field.relativeLocationsFW(relativeLocation)
     val scaleLF = Field.relativeLocationsLF(relativeLocation)
     val realX = x + Field.directionX(dirFW) * scaleFW + Field.directionX(dirLF) * scaleLF
     val realY = y + Field.directionY(dirFW) * scaleFW + Field.directionY(dirLF) * scaleLF
-    getCellChecked(realX, realY)
+    getSquareChecked(realX, realY)
   
   def getSumOfDistancesFromLeft(y: Int): Int = sumDistancesL(y)
   def getSumOfDistancesFromRight(y: Int): Int = sumDistancesR(y)
@@ -51,12 +51,12 @@ class Field(val width: Int, val height: Int):
       if o.equiv(t, fun(ind)) then
         ind.setLabel(label)
 
-  private inline def forEachIndividual(inline fun: (Field.Cell, Individual) => Unit): Unit =
+  private inline def forEachIndividual(inline fun: (Field.Square, Individual) => Unit): Unit =
     loopFromUntil(0, height): y =>
       loopFromUntil(0, width): x =>
-        val cell = getCell(x, y)
-        val ind = cell.individual
-        if ind != null then fun(cell, ind)
+        val sq = getSquare(x, y)
+        val ind = sq.individual
+        if ind != null then fun(sq, ind)
 end Field
 
 object Field:
@@ -68,7 +68,7 @@ object Field:
   val relativeLocationForward = 1
   val numberOfRelativeLocations: Int = relativeLocationsFW.length
 
-  class Cell(x: Int, y: Int, f: Field):
+  class Square(x: Int, y: Int, f: Field):
     private var _food: Double = 0.0
     private var _debris: Double = 0.0
     private var _individual: Individual = uninitialized
@@ -101,10 +101,10 @@ object Field:
       f.sumDistancesL(y) += x
       f.sumDistancesR(y) += f.width - 1 - x
 
-    def copyFrom(that: Cell): Unit =
+    def copyFrom(that: Square): Unit =
       _food = that._food
       _debris = that._debris
       _individual = if that._individual != null then that._individual.deepCopy() else null
     end copyFrom
-  end Cell
+  end Square
 end Field

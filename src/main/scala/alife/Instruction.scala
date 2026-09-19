@@ -41,14 +41,14 @@ object Instruction:
    */
   case object MyWeight extends Instruction:
     override def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
-      field.getCell(x, y).individual.weight
+      field.getSquare(x, y).individual.weight
   
   /**
    * Returns the health of the current individual.
    */
   case object MyHealth extends Instruction:
     override def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
-      field.getCell(x, y).individual.health
+      field.getSquare(x, y).individual.health
   
   /**
    * Returns the food amount at a given relative location to the current individual.
@@ -56,7 +56,7 @@ object Instruction:
    */
   case class FoodAt(relativeLocation: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
-      field.getRelativeCell(x, y, relativeLocation).food
+      field.getRelativeSquare(x, y, relativeLocation).food
   
   /**
    * Returns the amount of debris at a given relative location to the current individual.
@@ -64,7 +64,7 @@ object Instruction:
    */
   case class DebrisAt(relativeLocation: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
-      field.getRelativeCell(x, y, relativeLocation).debris
+      field.getRelativeSquare(x, y, relativeLocation).debris
   
   /**
    * Returns the health of an individual at a given relative location to the current individual, 0 if none.
@@ -72,7 +72,7 @@ object Instruction:
    */
   case class HealthAt(relativeLocation: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
-      val other = field.getRelativeCell(x, y, relativeLocation).individual
+      val other = field.getRelativeSquare(x, y, relativeLocation).individual
       if other != null then other.health else 0.0
   
   /**
