@@ -1,7 +1,5 @@
 package alife
 
-import java.util.random.RandomGenerator
-
 /**
  * Trait for all mutation operators.
  */
@@ -41,7 +39,7 @@ object Mutation:
           val (h, t) = genome.splitAt(rng.nextInt(1 + genome.size))
           (h :+ Instruction.random(rng, h.size)) ++ t
         case _ => throw AssertionError()
-      sim.createBacterium(newGenome, individual.label, individual.health, individual.direction)
+      sim.createBacterium(newGenome, individual.label, individual.health, individual.direction, individual)
   
   /**
    * The "smooth" mutation operator. There are three mutation options:
@@ -73,4 +71,4 @@ object Mutation:
             Instruction.mapArguments(a => if a > i then a + 1 else a)(v)
           (h :+ Instruction.random(rng, h.size)) ++ newTail
         case _ => throw AssertionError()
-      sim.createBacterium(newGenome, individual.label, individual.health, individual.direction)
+      sim.createBacterium(newGenome, individual.label, individual.health, individual.direction, individual)

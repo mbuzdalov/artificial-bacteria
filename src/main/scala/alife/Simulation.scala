@@ -38,7 +38,7 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     result.nBacteriaDeadOverall = nBacteriaDeadOverall
     result
   
-  def createBacterium(genome: IArray[Instruction], label: Int, health: Double, direction: Int): Individual =
+  def createBacterium(genome: IArray[Instruction], label: Int, health: Double, direction: Int, parent: Individual): Individual =
     nBacteriaBornOverall += 1
     Individual(genome, label, health, direction, nBacteriaBornOverall)
   
@@ -283,7 +283,7 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
         cell.setFood(1e-9)
         if currentFrameRandom.nextDouble() < config.initialBacteriaProbability then
           val genome = IArray.tabulate(config.initialGenomeLength)(i => Instruction.random(currentFrameRandom, i))
-          val individual = createBacterium(genome, 0, config.initialHealth, currentFrameRandom.nextInt(4))
+          val individual = createBacterium(genome, 0, config.initialHealth, currentFrameRandom.nextInt(4), null)
           cell.setIndividual(individual)
           nAliveBacteria += 1
   
