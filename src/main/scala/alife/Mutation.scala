@@ -19,15 +19,17 @@ trait Mutation:
 object Mutation:
   /**
    * The original "primitive" mutation operator. There are three mutation options:
+   * 0) with probability `1 - applicationProbability`, no change is applied.
    * 1) each instruction is replaced with a random one with probability 1 / genome size;
    * 2) a random instruction gets deleted (if the genome is empty, this does nothing);
    * 3) a random instruction is inserted at a random position (including before-first and after-last).
    */
-  case object Primitive extends Mutation:
+  case class Primitive(applicationProbability: Double) extends Mutation:
+    require(0 < applicationProbability && applicationProbability <= 1.0, "Probability should be in (0;1]")
     override def mutate(individual: Individual, sim: Simulation): Individual =
       val genome = individual.genome
       val rng = sim.random
-      val newGenome = rng.nextInt(3) match
+      val newGenome = if rng.nextDouble() >= applicationProbability then genome else rng.nextInt(3) match
         case 0 =>
           genome.zipWithIndex.map: (v, i) =>
             if rng.nextInt(genome.size) == 0 then Instruction.random(rng, i) else v
@@ -43,15 +45,17 @@ object Mutation:
   
   /**
    * The "smooth" mutation operator. There are three mutation options:
+   * 0) with probability `1 - applicationProbability`, no change is applied.
    * 1) each instruction is replaced with a random one with probability 1 / genome size;
    * 2) a random instruction gets deleted (if the genome is empty, this does nothing) and the instructions following the deletion get references fixed if possible.
    * 3) a random instruction is inserted at a random position (including before-first and after-last) and the instructions following the insertion get references fixed.
    */
-  case object Smooth extends Mutation:
+  case class Smooth(applicationProbability: Double) extends Mutation:
+    require(0 < applicationProbability && applicationProbability <= 1.0, "Probability should be in (0;1]")
     override def mutate(individual: Individual, sim: Simulation): Individual =
       val rng = sim.random
       val genome = individual.genome
-      val newGenome = rng.nextInt(3) match
+      val newGenome = if rng.nextDouble() >= applicationProbability then genome else rng.nextInt(3) match
         case 0 =>
           genome.zipWithIndex.map: (v, i) =>
             if rng.nextInt(genome.size) == 0 then Instruction.random(rng, i) else v

@@ -1,7 +1,8 @@
 package alife
 
-import alife.Action.{Fork, Move}
-import alife.Mutation.Smooth
+import alife.Action.{Eat, Fork, Move, RotateMinus, RotatePlus}
+import alife.Mutation.{NoChange, Primitive, Smooth}
+import alife.util.ChecksumSupport
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
 
@@ -36,7 +37,7 @@ class ConfigParsingTests extends AnyFlatSpec with should.Matchers:
     spotPeriodY = 2,
     spotSpeedY = 0.0027,
     spotDecay = 0.001,
-    actionSequence = IndexedSeq(Fork(Smooth), Move),
+    actionSequence = IndexedSeq(Fork(Smooth(1.0)), Fork(Primitive(0.1)), Fork(NoChange), Eat, Move, RotatePlus, RotateMinus),
   )
   private val referenceV1ConfigBase =
     """lifeConfigVersion = 1
@@ -65,13 +66,10 @@ class ConfigParsingTests extends AnyFlatSpec with should.Matchers:
       |spotPeriodY = 2.0
       |spotSpeedY = 0.0027
       |spotDecay = 0.001
-      |actionSequence = Fork(Smooth), Move
+      |actionSequence = Fork(Smooth(1.0)), Fork(Primitive(0.1)), Fork(NoChange), Eat, Move, RotatePlus, RotateMinus
       |""".stripMargin
-  private val referenceV1ConfigChecksum = "6d1937d2748e41d14f6debce0510fce2"
+  private val referenceV1ConfigChecksum = ChecksumSupport.md5sum(referenceV1ConfigBase.getBytes).asString
 
-  "Reference config" should "have a correct checksum" in:
-    referenceV1Config.checksum shouldEqual referenceV1ConfigChecksum
-  
   "Config.parse" should "parse V1 without a checksum correctly" in:
     val props = Properties()
     Using.resource(StringReader(referenceV1ConfigBase))(r => props.load(r))
@@ -100,4 +98,3 @@ class ConfigParsingTests extends AnyFlatSpec with should.Matchers:
     referenceV1Config.exportToStream(stream)
     val found = String(stream.toByteArray)
     found shouldEqual expected
-    

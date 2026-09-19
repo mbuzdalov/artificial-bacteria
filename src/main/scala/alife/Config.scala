@@ -98,8 +98,8 @@ object Config:
         actionSequenceSource.nextToken() match
           case s"Fork($operator)" => Fork:
             operator match
-              case "Primitive" => Mutation.Primitive
-              case "Smooth" => Mutation.Smooth
+              case s"Primitive($prob)" => Mutation.Primitive(prob.toDouble)
+              case s"Smooth($prob)" => Mutation.Smooth(prob.toDouble)
               case "NoChange" => Mutation.NoChange
               case other => throw IllegalArgumentException(s"In 'actionSequence', unknown mutation operator '$other'")
           case "Move" => Move
