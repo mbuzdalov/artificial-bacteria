@@ -100,6 +100,8 @@ object Config:
             operator match
               case "Primitive" => Mutation.Primitive
               case "Smooth" => Mutation.Smooth
+              case "NoChange" => Mutation.NoChange
+              case other => throw IllegalArgumentException(s"In 'actionSequence', unknown mutation operator '$other'")
           case "Move" => Move
           case "Eat" => Eat
           case "RotatePlus" => RotatePlus

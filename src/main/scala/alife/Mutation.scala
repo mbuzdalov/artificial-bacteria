@@ -72,3 +72,10 @@ object Mutation:
           (h :+ Instruction.random(rng, h.size)) ++ newTail
         case _ => throw AssertionError()
       sim.createBacterium(newGenome, individual.label, individual.health, individual.direction, individual)
+  
+  /**
+   * The mutation operator which does not mutate at all.
+   */
+  case object NoChange extends Mutation:
+    override def mutate(individual: Individual, sim: Simulation): Individual =
+      sim.createBacterium(individual.genome, individual.label, individual.health, individual.direction, individual)
