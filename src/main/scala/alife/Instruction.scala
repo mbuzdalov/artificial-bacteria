@@ -41,14 +41,14 @@ object Instruction:
    */
   case object MyWeight extends Instruction:
     override def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
-      field.getCell(x, y).weight
+      field.getCell(x, y).individual.weight
   
   /**
    * Returns the health of the current individual.
    */
   case object MyHealth extends Instruction:
     override def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
-      field.getCell(x, y).health
+      field.getCell(x, y).individual.health
   
   /**
    * Returns the food amount at a given relative location to the current individual.
@@ -72,7 +72,8 @@ object Instruction:
    */
   case class HealthAt(relativeLocation: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
-      field.getRelativeCell(x, y, relativeLocation).health
+      val other = field.getRelativeCell(x, y, relativeLocation).individual
+      if other != null then other.health else 0.0
   
   /**
    * Returns the sine of the other instruction's value.

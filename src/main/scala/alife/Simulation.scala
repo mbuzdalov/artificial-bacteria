@@ -21,6 +21,8 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
   private val sineCache = Array.ofDim[Double](field.width) /* "volatile", do not copy */
   private var nIterationsPerformed = 0L
   private var nAliveBacteria = 0
+  private var nBacteriaBornOverall = 0L
+  private var nBacteriaDeadOverall = 0L
   
   initialize()
   
@@ -32,7 +34,16 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     val result = new Simulation(config, field.deepCopy(), baseRandom.copy())
     result.nIterationsPerformed = nIterationsPerformed
     result.nAliveBacteria = nAliveBacteria
+    result.nBacteriaBornOverall = nBacteriaBornOverall
+    result.nBacteriaDeadOverall = nBacteriaDeadOverall
     result
+  
+  def createBacterium(genome: IArray[Instruction], label: Int, health: Double, direction: Int): Individual =
+    nBacteriaBornOverall += 1
+    Individual(genome, label, health, direction, nBacteriaBornOverall)
+  
+  def recordBacteriumDeath(ind: Individual): Unit =
+    nBacteriaDeadOverall += 1
   
   /**
    * Returns the random number generator to use for all decisions related to the simulation.
@@ -74,10 +85,7 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     loopFromTo(-radius, radius): xi =>
       loopFromTo(-radius, radius): yi =>
         if xi * xi + yi * yi <= radius * radius then
-          val cell = field.getCellChecked(x + xi, y + yi)
-          cell.setFood(0)
-          cell.setDebris(0)
-          cell.setIndividual(null, 0, 0)
+          field.getCellChecked(x + xi, y + yi).eraseEverything()
   
   /**
    * Returns an individual closest to (`x`, `y`) at a distance not bigger than `maxDist`. If there are multiple such
@@ -143,9 +151,13 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
       loopFromUntil(0, field.width): x =>
         val cell = field.getCell(x, y)
         if cell.individual != null then
-          val spentForLiving = math.min(config.idleCost, cell.health)
+          val ind = cell.removeIndividual()
+          val spentForLiving = math.min(config.idleCost, ind.health)
           cell.setDebris(cell.debris + spentForLiving * config.debrisFromActions)
-          cell.setIndividual(cell.individual, cell.direction, cell.health - config.idleCost)
+          ind.setHealth(ind.health - config.idleCost)
+          if ind.health >= 0
+          then cell.setIndividual(ind)
+          else recordBacteriumDeath(ind)
   
   /**
    * This part of the simulation deposits the food according to the configured logic
@@ -226,8 +238,8 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
         val ind = cell.individual
         if ind != null then
           nAliveBacteria += 1
-          sumHealths += cell.health
-          maxHealth = math.max(maxHealth, cell.health)
+          sumHealths += ind.health
+          maxHealth = math.max(maxHealth, ind.health)
           if ind.label < 0 then nMonsters += 1
           maxGenomeSize = math.max(maxGenomeSize, ind.genome.size)
           sumGenomeSizes += ind.genome.size
@@ -237,6 +249,8 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
           maxSpeed = math.max(maxSpeed, ind.averageSpeed)
           sumNecessaryInstructions += ind.necessaryInstructions(config)
           sumNecessaryInstructionRates += ind.necessaryInstructions(config).toDouble / ind.genome.size
+    
+    assert(nBacteriaBornOverall - nBacteriaDeadOverall == nAliveBacteria)
     
     StepStatistics(
       iteration = nIterationsPerformed,
@@ -265,16 +279,13 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     loopFromUntil(0, field.height): y =>
       loopFromUntil(0, field.width): x =>
         val cell = field.getCell(x, y)
-        cell.setDebris(0)
+        cell.eraseEverything()
         cell.setFood(1e-9)
-        if currentFrameRandom.nextDouble() < config.initialBacteriaProbability
-        then
-          cell.setIndividual(
-            individual = Individual(IArray.tabulate(config.initialGenomeLength)(i => Instruction.random(currentFrameRandom, i)), 0),
-            direction = currentFrameRandom.nextInt(4),
-            health = config.initialHealth)
+        if currentFrameRandom.nextDouble() < config.initialBacteriaProbability then
+          val genome = IArray.tabulate(config.initialGenomeLength)(i => Instruction.random(currentFrameRandom, i))
+          val individual = createBacterium(genome, 0, config.initialHealth, currentFrameRandom.nextInt(4))
+          cell.setIndividual(individual)
           nAliveBacteria += 1
-        else cell.setIndividual(null, 0, 0)
   
   /**
    * Performs a single simulation step and returns the statistics computed after performing the step.

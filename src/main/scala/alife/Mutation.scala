@@ -10,10 +10,10 @@ trait Mutation:
    * Creates a mutated copy of the given individual. A new individual will always be returned.
    *
    * @param individual the individual to mutate.
-   * @param rng        the random generator to be used.
+   * @param sim the simulation to be used.
    * @return the mutated individual.
    */
-  def mutate(individual: Individual, rng: RandomGenerator): Individual
+  def mutate(individual: Individual, sim: Simulation): Individual
 
 /**
  * Known implementations for mutation operators.
@@ -26,8 +26,9 @@ object Mutation:
    * 3) a random instruction is inserted at a random position (including before-first and after-last).
    */
   case object Primitive extends Mutation:
-    override def mutate(individual: Individual, rng: RandomGenerator): Individual =
+    override def mutate(individual: Individual, sim: Simulation): Individual =
       val genome = individual.genome
+      val rng = sim.random
       val newGenome = rng.nextInt(3) match
         case 0 =>
           genome.zipWithIndex.map: (v, i) =>
@@ -40,7 +41,7 @@ object Mutation:
           val (h, t) = genome.splitAt(rng.nextInt(1 + genome.size))
           (h :+ Instruction.random(rng, h.size)) ++ t
         case _ => throw AssertionError()
-      Individual(newGenome, individual.label)
+      sim.createBacterium(newGenome, individual.label, individual.health, individual.direction)
   
   /**
    * The "smooth" mutation operator. There are three mutation options:
@@ -49,7 +50,8 @@ object Mutation:
    * 3) a random instruction is inserted at a random position (including before-first and after-last) and the instructions following the insertion get references fixed.
    */
   case object Smooth extends Mutation:
-    override def mutate(individual: Individual, rng: RandomGenerator): Individual =
+    override def mutate(individual: Individual, sim: Simulation): Individual =
+      val rng = sim.random
       val genome = individual.genome
       val newGenome = rng.nextInt(3) match
         case 0 =>
@@ -71,4 +73,4 @@ object Mutation:
             Instruction.mapArguments(a => if a > i then a + 1 else a)(v)
           (h :+ Instruction.random(rng, h.size)) ++ newTail
         case _ => throw AssertionError()
-      Individual(newGenome, individual.label)
+      sim.createBacterium(newGenome, individual.label, individual.health, individual.direction)

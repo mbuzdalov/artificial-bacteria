@@ -33,11 +33,16 @@ object Action:
     override def canApply(sim: Simulation, x: Int, y: Int): Boolean = true
     override def apply(sim: Simulation, x: Int, y: Int): Unit =
       val cell = sim.field.getCell(x, y)
+      val ind = cell.removeIndividual()
       val config = sim.config
-      val e = config.rotationCost * (cell.health + cell.weight)
-      cell.setIndividual(cell.individual, (cell.direction + rotation) & 3, cell.health - e)
+      val e = config.rotationCost * (ind.health + ind.weight)
+      ind.setDirection((ind.direction + rotation) & 3)
+      ind.setHealth(ind.health - e)
+      if ind.health >= 0 
+        then cell.setIndividual(ind)
+        else sim.recordBacteriumDeath(ind)
       cell.setDebris(cell.debris + e * config.debrisFromActions)
-
+  
   /**
    * The negative (counter-clockwise) rotation:
    * 1) This action can always be applied.
@@ -62,18 +67,19 @@ object Action:
    */
   case object Move extends Action:
     override def canApply(sim: Simulation, x: Int, y: Int): Boolean =
-      sim.field.getRelativeCell(x, y, Field.relativeLocationForward).health == 0
+      sim.field.getRelativeCell(x, y, Field.relativeLocationForward).individual == null
     override def apply(sim: Simulation, x: Int, y: Int): Unit =
       assert(canApply(sim, x, y))
       val field = sim.field
       val config = sim.config
       val cell = field.getCell(x, y)
-      val e = config.moveCost * (cell.health + cell.weight + cell.debris)
-      val g = cell.individual
-      val h = cell.health
-      val d = cell.direction
-      field.getRelativeCell(x, y, Field.relativeLocationForward).setIndividual(g, d, h - e)
-      cell.setIndividual(null, 0, 0)
+      val nextCell = field.getRelativeCell(x, y, Field.relativeLocationForward)
+      val ind = cell.removeIndividual()
+      val e = config.moveCost * (ind.health + ind.weight + cell.debris)
+      ind.setHealth(ind.health - e)
+      if ind.health >= 0
+        then nextCell.setIndividual(ind)
+        else sim.recordBacteriumDeath(ind)
       cell.setDebris(cell.debris + e * config.debrisFromActions)
  
   /**
@@ -90,15 +96,19 @@ object Action:
     override def canApply(sim: Simulation, x: Int, y: Int): Boolean = true
     override def apply(sim: Simulation, x: Int, y: Int): Unit =
       val cell = sim.field.getCell(x, y)
+      val ind = cell.removeIndividual()
       val config = sim.config
-      val w = cell.weight
+      val w = ind.weight
       // how much can we eat before hitting our global limit
-      val intakeLimitGlobal = w * config.healthMultiple - cell.health
+      val intakeLimitGlobal = w * config.healthMultiple - ind.health
       // how much can we eat technically: min of current food and of the max increment
       val intakeLimitLocal = math.min(w * config.healthIncrementMultiple, cell.food)
       val toEat = math.max(0, math.min(intakeLimitGlobal, intakeLimitLocal))
       cell.setFood(cell.food - toEat)
-      cell.setIndividual(cell.individual, cell.direction, cell.health + toEat * (1 - config.eatCost))
+      ind.setHealth(ind.health + toEat * (1 - config.eatCost))
+      if ind.health >= 0 
+        then cell.setIndividual(ind)
+        else sim.recordBacteriumDeath(ind)
       cell.setDebris(cell.debris + toEat * config.eatCost * config.debrisFromActions)
   
   /**
@@ -117,13 +127,15 @@ object Action:
     override def apply(sim: Simulation, x: Int, y: Int): Unit =
       assert(canApply(sim, x, y))
       val cell = sim.field.getCell(x, y)
+      val ind = cell.removeIndividual()
       val config = sim.config
-      val e = config.forkCost * cell.weight
-      val g = cell.individual
-      val h = cell.health - e
-      val d = cell.direction
-      if h / 2 > 0 then
-        cell.setIndividual(mutation.mutate(g, sim.random), d, h / 2)
+      val e = config.forkCost * ind.weight
+      val h = ind.health - e
+      ind.setHealth(h / 2)
+      if ind.health >= 0 then
+        val mutant = mutation.mutate(ind, sim)
+        cell.setIndividual(mutant)
         Move.apply(sim, x, y)
-      cell.setIndividual(g, d, h / 2)
+        cell.setIndividual(ind)
+      else sim.recordBacteriumDeath(ind)  
       cell.setDebris(cell.debris + e * config.debrisFromActions)

@@ -5,37 +5,98 @@ import alife.Instruction.*
 
 /**
  * This class encapsulates the genome (a sequence of instructions), a label used in the visual highlighting code,
- * and some lifetime statistics of an individual.
+ * health and direction, the identifier, and some lifetime statistics of an individual.
  *
  * @param genome the genome
- * @param label the highlight-related label
+ * @param myLabel the highlight-related label
+ * @param myHealth the initial health of the individual
+ * @param myDirection the initial direction of the individual
+ * @param id the sequential identifier of the individual
  */
-class Individual(val genome: IArray[Instruction], val label: Int):
+class Individual(val genome: IArray[Instruction], private var myLabel: Int,
+                 private var myHealth: Double, private var myDirection: Int, val id: Long):
   private var myLifeSpan: Int = 1
-  private var myChildren: Int = 0
+  private var myChildrenCount: Int = 0
   private var myTravelDistance: Int = 0
   private var myNecessaryInstructions: Int = -1
-  
-  private def copyPrivateVariablesFrom(that: Individual): Individual =
-    myLifeSpan = that.myLifeSpan
-    myChildren = that.myChildren
-    myTravelDistance = that.myTravelDistance
-    myNecessaryInstructions = that.myNecessaryInstructions
-    this
+  private var pinnedToField: Boolean = false
   
   /**
-   * Creates a copy of this individual, including all the internal fields, except for the label,
-   * for which the new value is given.
-   * @param newLabel the new label value.
-   * @return the relabeled copy of this individual.
+   * Pins the individual to the field.
+   * Will fail if the health is negative.
+   * This locks changes to health and direction.
    */
-  def relabel(newLabel: Int): Individual = Individual(genome, newLabel).copyPrivateVariablesFrom(this)
+  def pin(): Unit =
+    checkAlive()
+    pinnedToField = true
+  
+  /**
+   * Unpins the individual from the field.
+   * This allows changes to health and direction.
+   */
+  def unpin(): Unit = pinnedToField = false
+  
+  /**
+   * Returns the weight of the individual, which is its genome length.
+   * @return the weight of the individual.
+   */
+  def weight: Int = genome.length
+  
+  /**
+   * Returns the current label of the individual.
+   * @return the current label of the individual.
+   */
+  def label: Int = myLabel
+  
+  /**
+   * Returns the current health of the individual.
+   * @return the current health of the individual.
+   */
+  def health: Double = myHealth
+  
+  /**
+   * Returns the current direction of the individual.
+   * @return the current direction of the individual.
+   */
+  def direction: Int = myDirection
+
+  /**
+   * Sets a new label for the individual.
+   * @param newLabel the new label value.
+   */
+  def setLabel(newLabel: Int): Unit =
+    myLabel = newLabel
+  
+  /**
+   * Sets a new health value for the individual.
+   * This will fail if the individual is pinned to the field.
+   * @param newHealth the new health value.
+   */
+  def setHealth(newHealth: Double): Unit =
+    checkNotPinned()
+    myHealth = newHealth
+  
+  /**
+   * Sets a new direction for the individual.
+   * This will fail if the individual is pinned to the field.
+   * @param newDirection the new direction.
+   */
+  def setDirection(newDirection: Int): Unit =
+    checkNotPinned()
+    myDirection = newDirection
   
   /**
    * Creates a deep copy of this individual with all the internal fields. Used for checkpointing.
    * @return the deep copy of this individual.
    */
-  def deepCopy(): Individual = Individual(genome, label).copyPrivateVariablesFrom(this)
+  def deepCopy(): Individual =
+    val result = Individual(genome, myLabel, myHealth, myDirection, id)
+    result.myLifeSpan = myLifeSpan
+    result.myChildrenCount = myChildrenCount
+    result.myTravelDistance = myTravelDistance
+    result.myNecessaryInstructions = myNecessaryInstructions
+    result.pinnedToField = pinnedToField
+    result
   
   /**
    * Computes the number of necessary instructions for this genome, given the configuration.
@@ -71,7 +132,7 @@ class Individual(val genome: IArray[Instruction], val label: Int):
    * Returns the number of children directly produced by this individual. This does not include grandchildren.
    * @return the number of children of this individual.
    */
-  def numberOfChildren: Int = myChildren
+  def numberOfChildren: Int = myChildrenCount
   
   /**
    * Returns the travel distance of this individual.
@@ -98,6 +159,12 @@ class Individual(val genome: IArray[Instruction], val label: Int):
   def recordAction(action: Action): Unit =
     myLifeSpan += 1
     action match
-      case a: Action.Fork => myChildren += 1
+      case a: Action.Fork => myChildrenCount += 1
       case Action.Move => myTravelDistance += 1
       case _ =>
+
+  private def checkNotPinned(): Unit =
+    if pinnedToField then throw IllegalStateException("The individual is pinned")
+
+  private def checkAlive(): Unit =
+    if myHealth < 0 then throw IllegalStateException("The individual is dead")

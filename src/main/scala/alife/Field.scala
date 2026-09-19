@@ -29,7 +29,7 @@ class Field(val width: Int, val height: Int):
     getCell(x0, y0)
   
   def getRelativeCell(x: Int, y: Int, relativeLocation: Int): Field.Cell =
-    val dirFW = cells(y)(x).direction
+    val dirFW = cells(y)(x).individual.direction
     val dirLF = (dirFW + 1) & 3
     val scaleFW = Field.relativeLocationsFW(relativeLocation)
     val scaleLF = Field.relativeLocationsLF(relativeLocation)
@@ -49,7 +49,7 @@ class Field(val width: Int, val height: Int):
     forEachIndividual((_, ind) => t = o.max(t, fun(ind)))
     forEachIndividual: (c, ind) =>
       if o.equiv(t, fun(ind)) then
-        c.setIndividual(ind.relabel(label), c.direction, c.health)
+        ind.setLabel(label)
 
   private inline def forEachIndividual(inline fun: (Field.Cell, Individual) => Unit): Unit =
     loopFromUntil(0, height): y =>
@@ -71,41 +71,40 @@ object Field:
   class Cell(x: Int, y: Int, f: Field):
     private var _food: Double = 0.0
     private var _debris: Double = 0.0
-    private var _health: Double = 0.0
-    private var _direction: Int = 0
     private var _individual: Individual = uninitialized
     
     def food: Double = _food
     def debris: Double = _debris
-    def health: Double = _health
-    def weight: Int = if _individual == null then 0 else _individual.genome.length
-    def direction: Int = _direction
     def individual: Individual = _individual
     
     def setFood(value: Double): Unit = _food = value
     def setDebris(value: Double): Unit = _debris = value
-    def setIndividual(individual: Individual, direction: Int, health: Double): Unit =
-      if _individual != null then
-        f.sumDistancesL(y) -= x
-        f.sumDistancesR(y) -= f.width - 1 - x
-      if health < 0 || individual == null then
-        _individual = null
-        _health = 0
-        _direction = 0
-      else
-        _individual = individual
-        _health = health
-        _direction = direction
-        f.sumDistancesL(y) += x
-        f.sumDistancesR(y) += f.width - 1 - x
-    end setIndividual
+    
+    def eraseEverything(): Unit =
+      if _individual != null then removeIndividual()
+      _food = 0.0
+      _debris = 0.0
+    
+    def removeIndividual(): Individual =
+      require(_individual != null)
+      val result = _individual
+      _individual = null
+      result.unpin()
+      f.sumDistancesL(y) -= x
+      f.sumDistancesR(y) -= f.width - 1 - x
+      result
+
+    def setIndividual(individual: Individual): Unit =
+      require(_individual == null)
+      _individual = individual
+      _individual.pin()
+      f.sumDistancesL(y) += x
+      f.sumDistancesR(y) += f.width - 1 - x
 
     def copyFrom(that: Cell): Unit =
       _food = that._food
       _debris = that._debris
-      _health = that._health
-      _direction = that._direction
-      _individual = that._individual.deepCopy()
+      _individual = if that._individual != null then that._individual.deepCopy() else null
     end copyFrom
   end Cell
 end Field
