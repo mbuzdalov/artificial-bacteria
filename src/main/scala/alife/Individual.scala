@@ -10,7 +10,7 @@ import alife.Instruction.*
  * @param genome the genome
  * @param label the highlight-related label
  */
-case class Individual(genome: IArray[Instruction], label: Int):
+class Individual(val genome: IArray[Instruction], val label: Int):
   private var myLifeSpan: Int = 1
   private var myChildren: Int = 0
   private var myTravelDistance: Int = 0
@@ -28,7 +28,7 @@ case class Individual(genome: IArray[Instruction], label: Int):
    * for which the new value is given.
    * @param newLabel the new label value.
    * @return the relabeled copy of this individual.
-   */  
+   */
   def relabel(newLabel: Int): Individual = Individual(genome, newLabel).copyPrivateVariablesFrom(this)
   
   /**
