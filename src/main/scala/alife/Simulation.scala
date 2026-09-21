@@ -85,7 +85,9 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     loopFromTo(-radius, radius): xi =>
       loopFromTo(-radius, radius): yi =>
         if xi * xi + yi * yi <= radius * radius then
-          field.getSquareChecked(x + xi, y + yi).eraseEverything()
+          val sq = field.getSquareChecked(x + xi, y + yi)
+          if sq.individual != null then recordBacteriumDeath(sq.individual)
+          sq.eraseEverything()
   
   /**
    * Returns an individual closest to (`x`, `y`) at a distance not bigger than `maxDist`. If there are multiple such
