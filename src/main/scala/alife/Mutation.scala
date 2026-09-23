@@ -32,14 +32,14 @@ object Mutation:
       val newGenome = if rng.nextDouble() >= applicationProbability then genome else rng.nextInt(3) match
         case 0 =>
           genome.zipWithIndex.map: (v, i) =>
-            if rng.nextInt(genome.size) == 0 then Instruction.random(rng, i) else v
+            if rng.nextInt(genome.size) == 0 then Instruction.random(sim, i) else v
         case 1 =>
           if genome.isEmpty then genome else
             val (h, t) = genome.splitAt(rng.nextInt(genome.size))
             h ++ t.tail
         case 2 =>
           val (h, t) = genome.splitAt(rng.nextInt(1 + genome.size))
-          (h :+ Instruction.random(rng, h.size)) ++ t
+          (h :+ Instruction.random(sim, h.size)) ++ t
         case _ => throw AssertionError()
       sim.createBacterium(newGenome, individual.label, individual.health, individual.direction, individual)
   
@@ -58,7 +58,7 @@ object Mutation:
       val newGenome = if rng.nextDouble() >= applicationProbability then genome else rng.nextInt(3) match
         case 0 =>
           genome.zipWithIndex.map: (v, i) =>
-            if rng.nextInt(genome.size) == 0 then Instruction.random(rng, i) else v
+            if rng.nextInt(genome.size) == 0 then Instruction.random(sim, i) else v
         case 1 =>
           if genome.isEmpty then genome else
             val (h, t) = genome.splitAt(rng.nextInt(genome.size))
@@ -73,7 +73,7 @@ object Mutation:
             // indices `i` and below should stay (`index` == `i` points to element following the insertion)
             // indices above `i + 1` need a +1
             Instruction.mapArguments(a => if a > i then a + 1 else a)(v)
-          (h :+ Instruction.random(rng, h.size)) ++ newTail
+          (h :+ Instruction.random(sim, h.size)) ++ newTail
         case _ => throw AssertionError()
       sim.createBacterium(newGenome, individual.label, individual.health, individual.direction, individual)
   

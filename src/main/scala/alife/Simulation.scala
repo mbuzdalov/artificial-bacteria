@@ -284,7 +284,7 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
         cell.eraseEverything()
         cell.setFood(1e-9)
         if currentFrameRandom.nextDouble() < config.initialBacteriaProbability then
-          val genome = IArray.tabulate(config.initialGenomeLength)(i => Instruction.random(currentFrameRandom, i))
+          val genome = IArray.tabulate(config.initialGenomeLength)(i => Instruction.random(this, i))
           val individual = createBacterium(genome, 0, config.initialHealth, currentFrameRandom.nextInt(4), null)
           cell.setIndividual(individual)
           nAliveBacteria += 1

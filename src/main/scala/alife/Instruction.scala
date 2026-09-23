@@ -157,11 +157,12 @@ object Instruction:
   
   /**
    * Generates a new random instruction for the given position in the individual.
-   * @param random the random number generator.
+   * @param sim the current simulation.
    * @param position the 0-based position of the instruction being generated.
    * @return the random instruction.
    */
-  def random(random: RandomGenerator, position: Int): Instruction =
+  def random(sim: Simulation, position: Int): Instruction =
+    val random = sim.random
     def nextPos() = random.nextInt(position + 1)
     def nextLoc() = random.nextInt(Field.numberOfRelativeLocations)
 
