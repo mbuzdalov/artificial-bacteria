@@ -29,6 +29,7 @@ class ConfigParsingTests extends AnyFlatSpec with should.Matchers:
     synthesisInit = 2,
     synthesisFinal = 0.02,
     synthesisDecay = 0.001,
+    synthesisRandomness = 1.0,
     idleCost = 0.5,
     healthMultiple = 2,
     healthIncrementMultiple = 1,
@@ -58,6 +59,7 @@ class ConfigParsingTests extends AnyFlatSpec with should.Matchers:
       |synthesisInit = 2.0
       |synthesisFinal = 0.02
       |synthesisDecay = 0.001
+      |synthesisRandomness = 1.0
       |idleCost = 0.5
       |healthMultiple = 2.0
       |healthIncrementMultiple = 1.0

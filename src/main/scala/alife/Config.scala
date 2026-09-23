@@ -11,7 +11,7 @@ case class Config(fieldWidth: Int, fieldHeight: Int,
                   initialGenomeLength: Int, initialBacteriaProbability: Double, initialHealth: Double,
                   rotationCost: Double, moveCost: Double, eatCost: Double, forkCost: Double,
                   debrisDegradation: Double, debrisToFood: Double, debrisFromActions: Double,
-                  synthesisInit: Double, synthesisFinal: Double, synthesisDecay: Double,
+                  synthesisInit: Double, synthesisFinal: Double, synthesisDecay: Double, synthesisRandomness: Double,
                   idleCost: Double, healthMultiple: Double, healthIncrementMultiple: Double,
                   spotPeriodX: Double, spotSpeedX: Double, spotPeriodY: Double, spotSpeedY: Double, spotDecay: Double,
                   actionSequence: Seq[Action]):
@@ -81,6 +81,7 @@ object Config:
          |synthesisInit = ${config.synthesisInit}
          |synthesisFinal = ${config.synthesisFinal}
          |synthesisDecay = ${config.synthesisDecay}
+         |synthesisRandomness = ${config.synthesisRandomness}
          |idleCost = ${config.idleCost}
          |healthMultiple = ${config.healthMultiple}
          |healthIncrementMultiple = ${config.healthIncrementMultiple}
@@ -132,6 +133,7 @@ object Config:
         synthesisInit = properties.getProperty("synthesisInit").toDouble,
         synthesisFinal = properties.getProperty("synthesisFinal").toDouble,
         synthesisDecay = properties.getProperty("synthesisDecay").toDouble,
+        synthesisRandomness = properties.getProperty("synthesisRandomness").toDouble,
         idleCost = properties.getProperty("idleCost").toDouble,
         healthMultiple = properties.getProperty("healthMultiple").toDouble,
         healthIncrementMultiple = properties.getProperty("healthIncrementMultiple").toDouble,

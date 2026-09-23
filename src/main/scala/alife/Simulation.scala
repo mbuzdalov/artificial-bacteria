@@ -183,7 +183,11 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     loopFromUntil(0, field.width): x =>
       sineCache(x) = (math.sin(x * spotXScale + spotXOffset) + 1) / 2
 
-    val expectedFoodPerSquareTimes2 = expectedFoodPerSquare * 2
+    val randomness = config.synthesisRandomness
+    require(0 <= randomness && randomness <= 1, "synthesisRandomness should be in [0;1]")
+    
+    val foodPerSquareLowerBound = expectedFoodPerSquare * (1 - randomness)
+    val foodPerSquareUpperBound = expectedFoodPerSquare * (1 + randomness)
     val debrisTotalDecay = math.max(0, 1 - config.debrisDegradation - config.debrisToFood)
     loopFromUntil(0, field.height): y =>
       val changeY = (math.sin(y * spotYScale + spotYOffset) + 1) / 2
@@ -199,10 +203,13 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
         // because the integral of changeX * changeY over the entire field is 1/4.
         // This way, `newFoodScale` is exactly `expectedFoodPerSquare` on average, which is what we want.
         //
-        // Now, we compute the same thing, but expectedFoodPerSquare is moved to scaling nextDouble,
-        // and different parts are computed at different times
+        // Now, we compute the same thing,
+        // but in a way that randomizes food per square using the synthesisRandomness field,
+        // and with different parts computed at different times.
         val newFoodScale = sineDecay + newFoodMultiple * changeX
-        val newFood = newFoodScale * currentFrameRandom.nextDouble(0, expectedFoodPerSquareTimes2)
+        val newFood = if randomness == 0.0
+          then newFoodScale
+          else newFoodScale * currentFrameRandom.nextDouble(foodPerSquareLowerBound, foodPerSquareUpperBound)
         val d2e = sq.debris * config.debrisToFood
         sq.setDebris(sq.debris * debrisTotalDecay)
         sq.setFood(sq.food + d2e + newFood)
