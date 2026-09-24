@@ -7,14 +7,14 @@ import alife.Instruction.*
  * This class encapsulates the genome (a sequence of instructions), a label used in the visual highlighting code,
  * health and direction, the identifier, and some lifetime statistics of an individual.
  *
+ * @param id the sequential identifier of the individual
  * @param genome the genome
  * @param myLabel the highlight-related label
  * @param myHealth the initial health of the individual
  * @param myDirection the initial direction of the individual
- * @param id the sequential identifier of the individual
  */
-class Individual(val genome: IArray[Instruction], private var myLabel: Int,
-                 private var myHealth: Double, private var myDirection: Int, val id: Long):
+class Individual(val id: Long, val genome: IArray[Instruction], private var myLabel: Int,
+                 private var myHealth: Double, private var myDirection: Int):
   private var myLifeSpan: Int = 1
   private var myChildrenCount: Int = 0
   private var myTravelDistance: Int = 0
@@ -90,7 +90,7 @@ class Individual(val genome: IArray[Instruction], private var myLabel: Int,
    * @return the deep copy of this individual.
    */
   def deepCopy(): Individual =
-    val result = Individual(genome, myLabel, myHealth, myDirection, id)
+    val result = Individual(id, genome, myLabel, myHealth, myDirection)
     result.myLifeSpan = myLifeSpan
     result.myChildrenCount = myChildrenCount
     result.myTravelDistance = myTravelDistance

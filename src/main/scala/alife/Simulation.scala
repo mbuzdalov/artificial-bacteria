@@ -38,10 +38,23 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
     result.nBacteriaDeadOverall = nBacteriaDeadOverall
     result
   
+  /**
+   * Record the creation of a bacterium.
+   * @param genome the genome of the bacterium.
+   * @param label the label (used for UI coloring).
+   * @param health the initial health.
+   * @param direction the initial direction.
+   * @param parent the parent of this bacterium (may be null).
+   * @return the new bacterium.
+   */
   def createBacterium(genome: IArray[Instruction], label: Int, health: Double, direction: Int, parent: Individual): Individual =
     nBacteriaBornOverall += 1
-    Individual(genome, label, health, direction, nBacteriaBornOverall)
+    Individual(nBacteriaBornOverall, genome, label, health, direction)
   
+  /**
+   * Record the death of a bacterium.
+   * @param ind the bacterium that has just died.
+   */
   def recordBacteriumDeath(ind: Individual): Unit =
     nBacteriaDeadOverall += 1
   
