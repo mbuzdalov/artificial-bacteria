@@ -1,5 +1,6 @@
 package alife
 
+import alife.persistence.{Persistor, PersistorFactory}
 import alife.util.PseudoStack
 import alife.util.Loops.*
 
@@ -15,7 +16,10 @@ import scala.compiletime.uninitialized
  * @param field the current state of the field in the simulation.
  * @param baseRandom the jumpable random number generator to seed frame-local random generators.
  */
-class Simulation private (val config: Config, val field: Field, baseRandom: JumpableGenerator):
+class Simulation private (val config: Config, val field: Field, baseRandom: JumpableGenerator, persistor: Persistor)
+extends AutoCloseable:
+  require(config == persistor.config, "Configurations in the arguments do not match")
+  
   private var currentFrameRandom: RandomGenerator = uninitialized
   private val callStack = PseudoStack() /* "volatile", do not copy */
   private val sineCache = Array.ofDim[Double](field.width) /* "volatile", do not copy */
@@ -23,6 +27,9 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
   private var nAliveBacteria = 0
   private var nBacteriaBornOverall = 0L
   private var nBacteriaDeadOverall = 0L
+  private var isClosed = false
+  private var currentIteration: Persistor.Iteration = uninitialized
+  private var isOutsideIterationProper = true
   
   initialize()
   
@@ -31,11 +38,22 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
    * @return the deep copy of the simulation state.
    */
   def deepCopy(): Simulation =
-    val result = new Simulation(config, field.deepCopy(), baseRandom.copy())
+    checkNotClosed()
+    checkOutsideIteration()
+    val result = new Simulation(config, field.deepCopy(), baseRandom.copy(), persistor)
     result.nIterationsPerformed = nIterationsPerformed
     result.nAliveBacteria = nAliveBacteria
     result.nBacteriaBornOverall = nBacteriaBornOverall
     result.nBacteriaDeadOverall = nBacteriaDeadOverall
+    result.isClosed = isClosed
+    result.currentIteration = currentIteration
+    result.isOutsideIterationProper = isOutsideIterationProper
+    result
+  
+  private def createBacteriumImpl(genome: IArray[Instruction], label: Int, health: Double, direction: Int, parent: Individual): Individual =
+    nBacteriaBornOverall += 1
+    val result = Individual(nBacteriaBornOverall, genome, label, health, direction)
+    currentIteration.registerBirth(result, if parent == null then 0 else parent.id)
     result
   
   /**
@@ -48,28 +66,58 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
    * @return the new bacterium.
    */
   def createBacterium(genome: IArray[Instruction], label: Int, health: Double, direction: Int, parent: Individual): Individual =
-    nBacteriaBornOverall += 1
-    Individual(nBacteriaBornOverall, genome, label, health, direction)
+    checkNotClosed()
+    checkInsideIteration()
+    createBacteriumImpl(genome, label, health, direction, parent)
+  
+  private def recordBacteriumDeathImpl(ind: Individual): Unit =
+    currentIteration.registerDeath(ind)
+    nBacteriaDeadOverall += 1
   
   /**
    * Record the death of a bacterium.
    * @param ind the bacterium that has just died.
    */
   def recordBacteriumDeath(ind: Individual): Unit =
-    nBacteriaDeadOverall += 1
+    checkNotClosed()
+    checkInsideIteration()
+    recordBacteriumDeathImpl(ind)
   
   /**
    * Returns the random number generator to use for all decisions related to the simulation.
    * Technical note: this generator is recreated before each frame starts, don't cache it.
    * @return the random number generator
    */
-  def random: RandomGenerator = currentFrameRandom
+  def random: RandomGenerator =
+    checkNotClosed()
+    currentFrameRandom
   
   /**
    * Returns the number of iterations performed in this simulation run.
    * @return the number of iterations performed.
    */
-  def iterations: Long = nIterationsPerformed
+  def iterations: Long =
+    checkNotClosed()
+    nIterationsPerformed
+  
+  /**
+   * When called, puts a monster with the specified genome to the specified cell of the field.
+   * The existing individual, if any, is killed and removed.
+   * @param x the abscissa where to put the monster.
+   * @param y the ordinate where to put the monster.
+   * @param genome the genome of the monster.
+   */
+  def placeMonster(x: Int, y: Int, genome: IArray[Instruction]): Unit =
+    checkNotClosed()
+    checkCanPerformInteractiveActions()
+    currentIteration.startMonsterAction(x, y, genome)
+    val sq = field.getSquare(x, y)
+    val previousIndividual = sq.individual
+    if previousIndividual != null then
+      sq.removeIndividual()
+      recordBacteriumDeathImpl(previousIndividual)
+    val monster = createBacteriumImpl(genome, -1, config.initialHealth, random.nextInt(4), null)
+    sq.setIndividual(monster)
   
   /**
    * When called, modifies the food in the specified circle towards the given target amount of food.
@@ -80,6 +128,9 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
    * @param targetAmount the target amount of food.
    */
   def increaseFood(x: Int, y: Int, radius: Int, targetAmount: Double): Unit =
+    checkNotClosed()
+    checkCanPerformInteractiveActions()
+    currentIteration.startIncreaseFoodAction(x, y, radius, targetAmount)
     loopFromTo(-radius, radius): xi =>
       loopFromTo(-radius, radius): yi =>
         if xi * xi + yi * yi <= radius * radius then
@@ -95,11 +146,14 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
    * @param radius the radius of the circle.
    */
   def eraseEverything(x: Int, y: Int, radius: Int): Unit =
+    checkNotClosed()
+    checkCanPerformInteractiveActions()
+    currentIteration.startEraseAction(x, y, radius)
     loopFromTo(-radius, radius): xi =>
       loopFromTo(-radius, radius): yi =>
         if xi * xi + yi * yi <= radius * radius then
           val sq = field.getSquareChecked(x + xi, y + yi)
-          if sq.individual != null then recordBacteriumDeath(sq.individual)
+          if sq.individual != null then recordBacteriumDeathImpl(sq.individual)
           sq.eraseEverything()
   
   /**
@@ -118,7 +172,29 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
         ).flatten).headOption match
           case Some(g) => Some(g)
           case None => impl(d + 1)
+    checkNotClosed()
     impl(0)
+  
+  /**
+   * Returns whether one can perform interactive actions within the current iteration.
+   * @return whether one can perform interactive actions.
+   */
+  def canPerformInteractiveActions: Boolean = currentIteration.canPerformInteractiveActions
+  
+  private def checkCanPerformInteractiveActions(): Unit =
+    if !currentIteration.canPerformInteractiveActions
+    then throw IllegalStateException("Current iteration disallows interactive actions")
+  
+  private def checkInsideIteration(): Unit =
+    if isOutsideIterationProper
+    then throw IllegalStateException("A modification that shall happen only inside an iteration was called outside of an iteration")
+  
+  private def checkOutsideIteration(): Unit =
+    if !isOutsideIterationProper
+    then throw IllegalStateException("State copying cannot happen when inside an iteration")
+  
+  private def checkNotClosed(): Unit =
+    if isClosed then throw IllegalStateException("close() has been called on this Simulation")
   
   /**
    * This part of the simulation scans individuals in the top-to-bottom left-to-right order
@@ -135,27 +211,33 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
         val ind = sq.individual
         if ind != null then
           val g = ind.genome
-          callStack.clear()
-          loopFromUntil(0, g.size): i =>
-            callStack.push(g(i).apply(field, x, y, callStack))
+          val action = if currentIteration.hasNextCachedAction then currentIteration.nextCachedAction else
+            callStack.clear()
+            loopFromUntil(0, g.size): i =>
+              callStack.push(g(i).apply(field, x, y, callStack))
+            
+            // Outputs are organized as follows:
+            // action:            0             1                2      ...
+            // output:  callStack(1)  callStack(2)     callStack(3)     ...
+            // order:   most recent   2nd most recent  3rd most recent  ...
+            
+            var chosenAction = -1
+            loopFromUntil(0, math.min(g.size, actions.size)): i =>
+              if actions(i).canApply(this, x, y) then
+                if chosenAction == -1 || callStack(i + 1) > callStack(chosenAction + 1) then
+                  chosenAction = i
+
+            currentIteration.writeAction(chosenAction)
+            chosenAction
+          end action
           
-          // Outputs are organized as follows:
-          // action:            0             1                2      ...
-          // output:  callStack(1)  callStack(2)     callStack(3)     ...
-          // order:   most recent   2nd most recent  3rd most recent  ...
-          
-          var chosenAction = -1
-          loopFromUntil(0, math.min(g.size, actions.size)): i =>
-            if actions(i).canApply(this, x, y) then
-              if chosenAction == -1 || callStack(i + 1) > callStack(chosenAction + 1) then
-                chosenAction = i
-          
-          if chosenAction != -1 then
-            val theAction = actions(chosenAction)
+          if action != -1 then
+            val theAction = actions(action)
             ind.recordAction(theAction)
             theAction.apply(this, x, y)
-            actionCount(chosenAction) += 1
-    
+            actionCount(action) += 1
+          end if
+
     actionCount
   
   /**
@@ -293,11 +375,19 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
       avgNecessaryInstructionRatio = sumNecessaryInstructionRates / nAliveBacteria,
     )
   
+  private inline def withIteration[T](index: Long)(inline body: => T): T =
+    checkNotClosed()
+    currentIteration = persistor.connectToIteration(index)
+    currentFrameRandom = baseRandom.copyAndJump()
+    isOutsideIterationProper = false
+    try body finally
+      isOutsideIterationProper = true
+      currentIteration.close()
+  
   /**
    * Initializes the field randomly as configured.
    */
-  private def initialize(): Unit =
-    currentFrameRandom = baseRandom.copyAndJump()
+  private def initialize(): Unit = withIteration(0):
     loopFromUntil(0, field.height): y =>
       loopFromUntil(0, field.width): x =>
         val cell = field.getSquare(x, y)
@@ -313,8 +403,7 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
    * Performs a single simulation step and returns the statistics computed after performing the step.
    * @return the statistics for the step just performed.
    */
-  def simulationStep(): StepStatistics =
-    currentFrameRandom = baseRandom.copyAndJump()
+  def simulationStep(): StepStatistics = withIteration(nIterationsPerformed + 1):
     nIterationsPerformed += 1
     val actionCount = performActionsOnIndividuals()
     drainIdleEnergy()
@@ -326,6 +415,13 @@ class Simulation private (val config: Config, val field: Field, baseRandom: Jump
    * @return whether simulation can continue.
    */
   def canContinue: Boolean = nAliveBacteria > 0
+  
+  /**
+   * Closes this simulation and releases all associated resources.
+   */
+  override def close(): Unit =
+    isClosed = true
+    persistor.close()
 
 object Simulation:
   /**
@@ -333,14 +429,18 @@ object Simulation:
    * The prototype configuration is different from the actual configuration to be used in that
    * the random seed may be set to 0, in which case the new (time-based) seed will be generated.
    *
+   * An optional argument is the persistor factory,
+   *
    * @param protoConfig the prototype configuration to use.
+   * @param persistorFactory the persistor factory to use.
    */
-  def apply(protoConfig: Config): Simulation =
+  def apply(protoConfig: Config, persistorFactory: PersistorFactory = PersistorFactory.Dummy): Simulation =
     val config = protoConfig.withFixedSeed
     val result = new Simulation(
       config = config,
       field = Field(config.fieldWidth, config.fieldHeight),
-      baseRandom = RandomGeneratorFactory.of[JumpableGenerator](config.randomFactory).create(config.randomSeed)
+      baseRandom = RandomGeneratorFactory.of[JumpableGenerator](config.randomFactory).create(config.randomSeed),
+      persistor = persistorFactory.connect(config)
     )
 
     println(s"Runtime context created with random factory '${config.randomFactory}' and ${

@@ -1,5 +1,6 @@
 package alife
 
+import alife.persistence.PersistorFactory
 import alife.sound.{DefaultSynthesizer, SoundWriterJob}
 import alife.util.{DelayGate, SwingEx}
 import alife.util.Loops.*
@@ -87,6 +88,8 @@ object Main:
     val legendIsOnRight = properties.getProperty("legendIsOnRight").toBoolean
     val autoPause = properties.getProperty("autoPause").toInt
     
+    val persistorFactory = PersistorFactory.Dummy
+    
     val fieldDelayGate = DelayGate()
     val simulationDelayGate = DelayGate()
     val labelDelayGate = DelayGate()
@@ -169,21 +172,21 @@ object Main:
     val clickCommands = LinkedBlockingDeque[(Simulation, StepStatistics) => Unit]()
     val mouseClickGroup = ButtonGroup()
     mouseClickGroup.add(mouseDoNothing)
+    if enableGenomeDumping then mouseClickGroup.add(mouseDumpGenome)
     mouseClickGroup.add(mouseSmallFood)
     mouseClickGroup.add(mouseLargeFood)
     mouseClickGroup.add(mouseSmallDestroy)
     mouseClickGroup.add(mouseLargeDestroy)
-    mouseClickGroup.add(mouseDumpGenome)
     mouseClickGroup.add(mousePutMonster)
     mouseDoNothing.setSelected(true)
 
     rightPane.add(brush(fontSize, JLabel(msg.mouseClick)))
     rightPane.add(mouseDoNothing)
+    if enableGenomeDumping then rightPane.add(mouseDumpGenome)
     rightPane.add(mouseSmallFood)
     rightPane.add(mouseLargeFood)
     rightPane.add(mouseSmallDestroy)
     rightPane.add(mouseLargeDestroy)
-    if enableGenomeDumping then rightPane.add(mouseDumpGenome)
     rightPane.add(mousePutMonster)
     rightPane.add(wellAlignedBox(textWidth, fontSize))
 
@@ -278,22 +281,34 @@ object Main:
       override def mouseClicked(e: MouseEvent): Unit =
         val (x, y) = view.translate(e.getX, e.getY)
         
-        // FAT WARNING HERE
-        // Almost all these actions change the state of the field (including the RNG)
-        // We need to deal with it once we support replays, either by disabling this or by logging this.
-        
-        if mouseSmallFood.isSelected then clickCommands.addLast((e, s) => e.increaseFood(x, y, smallRadius, s.maxFood * 1.05))
-        if mouseLargeFood.isSelected then clickCommands.addLast((e, s) => e.increaseFood(x, y, largeRadius, s.maxFood * 1.05))
-        if mouseSmallDestroy.isSelected then clickCommands.addLast((e, _) => e.eraseEverything(x, y, smallRadius))
-        if mouseLargeDestroy.isSelected then clickCommands.addLast((e, _) => e.eraseEverything(x, y, largeRadius))
-        if mouseDumpGenome.isSelected then clickCommands.addLast: (e, _) =>
-          e.findAndDumpClosestIndividual(x, y, 21) match
-            case Some(ind) => println(ind.genome.mkString("IArray(", ", ", ")"))
-            case None => println("No bacteria nearby")
-        if mousePutMonster.isSelected then clickCommands.addLast: (e, _) =>
-          val sq = e.field.getSquare(x, y)
-          val monster = e.createBacterium(compatibleMonster.get, -1, config.initialHealth, e.random.nextInt(4), null)
-          sq.setIndividual(monster)
+        // Interactive actions shall check whether they can be performed, because this may change on the fly
+        if mouseSmallFood.isSelected
+          then clickCommands.addLast: (e, s) =>
+            if e.canPerformInteractiveActions
+              then e.increaseFood(x, y, smallRadius, s.maxFood * 1.05)
+        if mouseLargeFood.isSelected
+          then clickCommands.addLast: (e, s) =>
+            if e.canPerformInteractiveActions
+              then e.increaseFood(x, y, largeRadius, s.maxFood * 1.05)
+        if mouseSmallDestroy.isSelected
+          then clickCommands.addLast: (e, _) =>
+            if e.canPerformInteractiveActions
+              then e.eraseEverything(x, y, smallRadius)
+        if mouseLargeDestroy.isSelected
+          then clickCommands.addLast: (e, _) =>
+            if e.canPerformInteractiveActions
+              then e.eraseEverything(x, y, largeRadius)
+        if mousePutMonster.isSelected
+          then clickCommands.addLast: (e, _) =>
+            if e.canPerformInteractiveActions
+              then e.placeMonster(x, y, compatibleMonster.get)
+          
+        // Dumping the genome is an exception to that because it does not modify the state
+        if mouseDumpGenome.isSelected
+          then clickCommands.addLast: (e, _) =>
+            e.findAndDumpClosestIndividual(x, y, 21) match
+              case Some(ind) => println(ind.genome.mkString("IArray(", ", ", ")"))
+              case None => println("No bacteria nearby")
     
     view.addMouseListener(mouseClickHandler)
 
@@ -327,23 +342,33 @@ object Main:
       labelDelayGate.reset()
       simulationDelayGate.reset()
     
+    inline def newSimulation(): Simulation =
+      Simulation(config, persistorFactory)
+    
     @tailrec
     def work(sim: Simulation): Unit = if !window.isVisible then
-      // terminate various threads
+      sim.close()
       soundWriter.foreach(_.clearField())
     else if restarted.getAndSet(false) then
+      sim.close()
       view.resetState()
-      // FAT WARNING HERE
-      // When replays get supported, check in which way this is compatible
-      work(Simulation(config))
+      work(newSimulation())
     else if !sim.canContinue then
       executePause(PausedState.Finished)
       waitUntilUnpausedOrDead()
-      work(null) // logic on what to do after this method quits is written above; `null` just in case
+      work(sim) // will get closed and replaced in either of the two top cases
     else
       soundWriter.foreach(_.setField(sim.field))
       
       val stepStats = simulationDelayGate.runOrWait(sim.simulationStep())
+
+      // Buttons related to interactive actions are enabled or disabled based on whether interactive actions are enabled
+      mouseSmallFood.setEnabled(sim.canPerformInteractiveActions)
+      mouseLargeFood.setEnabled(sim.canPerformInteractiveActions)
+      mouseSmallDestroy.setEnabled(sim.canPerformInteractiveActions)
+      mouseLargeDestroy.setEnabled(sim.canPerformInteractiveActions)
+      mousePutMonster.setEnabled(sim.canPerformInteractiveActions)
+      
       val effectiveFPS = 1.0 / simulationDelayGate.lastLeadInTime
       val visualFPS = 1.0 / fieldDelayGate.lastLeadInTime
       view.fetchField(sim.field)
@@ -383,5 +408,5 @@ object Main:
       work(sim)
     end work
     
-    work(Simulation(config))
+    work(newSimulation())
   end main
