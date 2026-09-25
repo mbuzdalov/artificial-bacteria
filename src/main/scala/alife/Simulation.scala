@@ -121,6 +121,14 @@ extends AutoCloseable:
     nIterationsPerformed
   
   /**
+   * Generates a random instruction for the given position, as specified in the config.
+   * @param position the position to generate a random instruction for.
+   * @return the generated instruction.
+   */
+  def randomInstruction(position: Int): Instruction =
+    config.randomInstructionFactory(random).generate(position, random)
+  
+  /**
    * When called, puts a monster with the specified genome to the specified cell of the field.
    * The existing individual, if any, is killed and removed.
    * @param x the abscissa where to put the monster.
@@ -414,7 +422,7 @@ extends AutoCloseable:
         cell.eraseEverything()
         cell.setFood(1e-9)
         if currentFrameRandom.nextDouble() < config.initialBacteriaProbability then
-          val genome = IArray.tabulate(config.initialGenomeLength)(i => Instruction.random(this, i))
+          val genome = IArray.tabulate(config.initialGenomeLength)(i => randomInstruction(i))
           val individual = createBacterium(genome, 0, config.initialHealth, currentFrameRandom.nextInt(4), null)
           cell.setIndividual(individual)
           nAliveBacteria += 1

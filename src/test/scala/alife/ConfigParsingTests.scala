@@ -1,6 +1,7 @@
 package alife
 
 import alife.Action.*
+import alife.Instruction.*
 import alife.Mutation.{NoChange, Primitive, Smooth}
 import alife.util.ChecksumSupport
 import org.scalatest.flatspec.AnyFlatSpec
@@ -39,6 +40,8 @@ class ConfigParsingTests extends AnyFlatSpec with should.Matchers:
     spotSpeedY = 0.0027,
     spotDecay = 0.001,
     actionSequence = IndexedSeq(Fork(Smooth(1.0)), Fork(Primitive(0.1)), Fork(NoChange), Eat, Move, RotatePlus, RotateMinus),
+    instructionSequence = IndexedSeq(Const, Cos, DebrisAt, Divide, Exp, FoodAt, HealthAt, Log, Minus, MyHealth, MyWeight, Plus, Sigmoid, Sin, Times),
+    instructionProbabilities = IndexedSeq.fill(14)(1.0 / 16) :+ 1.0 / 8,
   )
   private val referenceV1ConfigBase =
     """lifeConfigVersion = 1
@@ -69,6 +72,22 @@ class ConfigParsingTests extends AnyFlatSpec with should.Matchers:
       |spotSpeedY = 0.0027
       |spotDecay = 0.001
       |actionSequence = Fork(Smooth(1.0)), Fork(Primitive(0.1)), Fork(NoChange), Eat, Move, RotatePlus, RotateMinus
+      |instructions = Const, Cos, DebrisAt, Divide, Exp, FoodAt, HealthAt, Log, Minus, MyHealth, MyWeight, Plus, Sigmoid, Sin, Times
+      |instructionProbability.Const = 0.0625
+      |instructionProbability.Cos = 0.0625
+      |instructionProbability.DebrisAt = 0.0625
+      |instructionProbability.Divide = 0.0625
+      |instructionProbability.Exp = 0.0625
+      |instructionProbability.FoodAt = 0.0625
+      |instructionProbability.HealthAt = 0.0625
+      |instructionProbability.Log = 0.0625
+      |instructionProbability.Minus = 0.0625
+      |instructionProbability.MyHealth = 0.0625
+      |instructionProbability.MyWeight = 0.0625
+      |instructionProbability.Plus = 0.0625
+      |instructionProbability.Sigmoid = 0.0625
+      |instructionProbability.Sin = 0.0625
+      |instructionProbability.Times = 0.125
       |""".stripMargin
   private val referenceV1ConfigChecksum = ChecksumSupport.md5sum(referenceV1ConfigBase.getBytes).asString
 
