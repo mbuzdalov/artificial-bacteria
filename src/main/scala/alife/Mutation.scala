@@ -1,5 +1,7 @@
 package alife
 
+import alife.util.Loops.loopFromUntil
+
 /**
  * Trait for all mutation operators.
  */
@@ -17,6 +19,28 @@ trait Mutation:
  * Known implementations for mutation operators.
  */
 object Mutation:
+  private def standardMutation(genome: IArray[Instruction], sim: Simulation): IArray[Instruction] =
+    val genomeCopy = genome.unsafeArray.clone()
+    val rng = sim.random
+    loopFromUntil(0, genomeCopy.length): i =>
+      if rng.nextInt(genome.size) == 0 then genomeCopy(i) = sim.randomInstruction(i)
+    IArray.unsafeFromArray(genomeCopy)
+  
+  private def cutInstruction(genome: IArray[Instruction], index: Int): Array[Instruction] =
+    val ga = genome.unsafeArray
+    val result = Array.ofDim[Instruction](ga.length - 1)
+    System.arraycopy(ga, 0, result, 0, index)
+    System.arraycopy(ga, index + 1, result, index, result.length - index)
+    result
+  
+  private def insertInstruction(genome: IArray[Instruction], index: Int, sim: Simulation): Array[Instruction] =
+    val ga = genome.unsafeArray
+    val result = Array.ofDim[Instruction](ga.length + 1)
+    System.arraycopy(ga, 0, result, 0, index)
+    result(index) = sim.randomInstruction(index)
+    System.arraycopy(ga, index, result, index + 1, ga.length - index)
+    result
+  
   /**
    * The original "primitive" mutation operator. There are three mutation options:
    * 0) with probability `1 - applicationProbability`, no change is applied.
@@ -30,17 +54,9 @@ object Mutation:
       val genome = individual.genome
       val rng = sim.random
       val newGenome = if rng.nextDouble() >= applicationProbability then genome else rng.nextInt(3) match
-        case 0 =>
-          genome.zipWithIndex.map: (v, i) =>
-            if rng.nextInt(genome.size) == 0 then sim.randomInstruction(i) else v
-        case 1 =>
-          if genome.isEmpty then genome else
-            val (h, t) = genome.splitAt(rng.nextInt(genome.size))
-            h ++ t.tail
-        case 2 =>
-          val (h, t) = genome.splitAt(rng.nextInt(1 + genome.size))
-          (h :+ sim.randomInstruction(h.size)) ++ t
-        case _ => throw AssertionError()
+        case 0 => standardMutation(genome, sim)
+        case 1 => if genome.isEmpty then genome else IArray.unsafeFromArray(cutInstruction(genome, rng.nextInt(genome.length)))
+        case 2 => IArray.unsafeFromArray(insertInstruction(genome, rng.nextInt(genome.length + 1), sim))
       sim.createBacterium(newGenome, individual.label, individual.health, individual.direction, individual)
   
   /**
@@ -56,24 +72,23 @@ object Mutation:
       val rng = sim.random
       val genome = individual.genome
       val newGenome = if rng.nextDouble() >= applicationProbability then genome else rng.nextInt(3) match
-        case 0 =>
-          genome.zipWithIndex.map: (v, i) =>
-            if rng.nextInt(genome.size) == 0 then sim.randomInstruction(i) else v
-        case 1 =>
-          if genome.isEmpty then genome else
-            val (h, t) = genome.splitAt(rng.nextInt(genome.size))
-            val newTail = t.tail.zipWithIndex.map: (v, i) =>
-              // indices `i` and below should stay (`index` == `i` points to element following the deletion)
-              // indices above `i + 1` need a -1, index `i + 1` was deleted (-1 is safe)
-              v.mapReferences(a => if a > i then a - 1 else a)
-            h ++ newTail
+        case 0 => standardMutation(genome, sim)
+        case 1 => if genome.isEmpty then genome else
+          val index = rng.nextInt(genome.length)
+          val temp = cutInstruction(genome, index)
+          // indices `i` and below should stay (`index` == `i` points to element following the deletion)
+          // indices above `i + 1` need a -1, index `i + 1` was deleted (-1 is safe)
+          loopFromUntil(index, temp.length): i =>
+            temp(i) = temp(i).mapReferences(a => if a > i - index then a - 1 else a)
+          IArray.unsafeFromArray(temp)
         case 2 =>
-          val (h, t) = genome.splitAt(rng.nextInt(1 + genome.size))
-          val newTail = t.zipWithIndex.map: (v, i) =>
-            // indices `i` and below should stay (`index` == `i` points to element following the insertion)
-            // indices above `i + 1` need a +1
-            v.mapReferences(a => if a > i then a + 1 else a)
-          (h :+ sim.randomInstruction(h.size)) ++ newTail
+          val index = rng.nextInt(genome.length + 1)
+          val temp = insertInstruction(genome, index, sim)
+          // indices `i` and below should stay (`index` == `i` points to element following the insertion)
+          // indices above `i + 1` need a +1
+          loopFromUntil(index + 1, temp.length): i =>
+            temp(i) = temp(i).mapReferences(a => if a > i - index - 1 then a + 1 else a)
+          IArray.unsafeFromArray(temp)
         case _ => throw AssertionError()
       sim.createBacterium(newGenome, individual.label, individual.health, individual.direction, individual)
   
