@@ -4,7 +4,6 @@ import alife.Action.*
 import alife.util.ChecksumSupport
 
 import java.util.{Properties, StringTokenizer}
-import java.io.OutputStream
 
 case class Config(fieldWidth: Int, fieldHeight: Int,
                   randomSeed: Long, randomFactory: String,
@@ -48,17 +47,16 @@ case class Config(fieldWidth: Int, fieldHeight: Int,
     ChecksumSupport.md5sum(textRepresentation).asString
   
   /**
-   * Appends the (textual representation of) this config to the given output stream.
-   * This will fail if this is a prototype config (with a zero random seed).
-   * @param stream the output stream to append to.
+   * Returns the canonical byte array representation of this config.
+   * @return the canonical byte array representation.
    */
-  def exportToStream(stream: OutputStream): Unit =
-    require(randomSeed != 0, "Exporting to streams makes no sense for prototype configurations (with random seed == 0)")
-    stream.write(textRepresentation)
-    val checkSumComponent =
-      s"""lifeConfigChecksum = $checksum
-         |""".stripMargin
-    stream.write(checkSumComponent.getBytes)
+  def toByteArray: Array[Byte] =
+    require(randomSeed != 0, "Exporting to Array[Byte] makes no sense for prototype configurations (with random seed == 0)")
+    val checkSumComponent = s"lifeConfigChecksum = $checksum\n".getBytes
+    val result = Array.ofDim[Byte](textRepresentation.length + checkSumComponent.length)
+    System.arraycopy(textRepresentation, 0, result, 0, textRepresentation.length)
+    System.arraycopy(checkSumComponent, 0, result, textRepresentation.length, checkSumComponent.length)
+    result
 
 object Config:
   private object SupportV1:

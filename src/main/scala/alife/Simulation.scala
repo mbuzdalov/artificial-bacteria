@@ -7,6 +7,7 @@ import alife.util.Loops.*
 import java.util.random.RandomGenerator.JumpableGenerator
 import java.util.random.{RandomGenerator, RandomGeneratorFactory}
 import scala.annotation.tailrec
+import scala.collection.mutable.ArrayBuffer
 import scala.compiletime.uninitialized
 
 /**
@@ -15,23 +16,43 @@ import scala.compiletime.uninitialized
  * @param config the configuration to use by this simulation run.
  * @param field the current state of the field in the simulation.
  * @param baseRandom the jumpable random number generator to seed frame-local random generators.
+ * @param persistor the (nullable) persistence engine used to cache action computation of individuals
  */
 class Simulation private (val config: Config, val field: Field, baseRandom: JumpableGenerator, persistor: Persistor)
 extends AutoCloseable:
-  require(config == persistor.config, "Configurations in the arguments do not match")
+  if persistor != null then
+    require(config == persistor.config, "Configurations in the arguments do not match")
   
   private var currentFrameRandom: RandomGenerator = uninitialized
   private val callStack = PseudoStack() /* "volatile", do not copy */
   private val sineCache = Array.ofDim[Double](field.width) /* "volatile", do not copy */
+  private val genealogyListeners = ArrayBuffer[Simulation.GenealogyListener]()
   private var nIterationsPerformed = 0L
   private var nAliveBacteria = 0
   private var nBacteriaBornOverall = 0L
   private var nBacteriaDeadOverall = 0L
   private var isClosed = false
-  private var currentIteration: Persistor.Iteration = uninitialized
   private var isOutsideIterationProper = true
   
   initialize()
+  
+  /**
+   * Adds the specified listener to watch for genealogy events.
+   * Adding the same listener will result in receiving same messages multiple times.
+   * @param listener the listener.
+   */
+  def addGenealogyListener(listener: Simulation.GenealogyListener): Unit =
+    genealogyListeners.addOne(listener)
+  
+  /**
+   * Removes the specified listener to (no longer) watch for genealogy events.
+   * This removes only the first copy of a listener, comparing by `equals`.
+   * If there is no such listener, nothing changes.
+   * @param listener the listener.
+   */
+  def removeGenealogyListener(listener: Simulation.GenealogyListener): Unit =
+    val index = genealogyListeners.indexOf(listener)
+    if index >= 0 then genealogyListeners.remove(index)
   
   /**
    * Performs a deep copy of the simulation state to create a checkpoint.
@@ -46,14 +67,13 @@ extends AutoCloseable:
     result.nBacteriaBornOverall = nBacteriaBornOverall
     result.nBacteriaDeadOverall = nBacteriaDeadOverall
     result.isClosed = isClosed
-    result.currentIteration = currentIteration
     result.isOutsideIterationProper = isOutsideIterationProper
     result
   
   private def createBacteriumImpl(genome: IArray[Instruction], label: Int, health: Double, direction: Int, parent: Individual): Individual =
     nBacteriaBornOverall += 1
     val result = Individual(nBacteriaBornOverall, genome, label, health, direction)
-    currentIteration.registerBirth(result, if parent == null then 0 else parent.id)
+    genealogyListeners.foreach(_.bacteriumBorn(result, parent, nIterationsPerformed))
     result
   
   /**
@@ -71,7 +91,7 @@ extends AutoCloseable:
     createBacteriumImpl(genome, label, health, direction, parent)
   
   private def recordBacteriumDeathImpl(ind: Individual): Unit =
-    currentIteration.registerDeath(ind)
+    genealogyListeners.foreach(_.bacteriumDead(ind, nIterationsPerformed))
     nBacteriaDeadOverall += 1
   
   /**
@@ -109,8 +129,7 @@ extends AutoCloseable:
    */
   def placeMonster(x: Int, y: Int, genome: IArray[Instruction]): Unit =
     checkNotClosed()
-    checkCanPerformInteractiveActions()
-    currentIteration.startMonsterAction(x, y, genome)
+    checkCanPerformInteractions()
     val sq = field.getSquare(x, y)
     val previousIndividual = sq.individual
     if previousIndividual != null then
@@ -129,8 +148,7 @@ extends AutoCloseable:
    */
   def increaseFood(x: Int, y: Int, radius: Int, targetAmount: Double): Unit =
     checkNotClosed()
-    checkCanPerformInteractiveActions()
-    currentIteration.startIncreaseFoodAction(x, y, radius, targetAmount)
+    checkCanPerformInteractions()
     loopFromTo(-radius, radius): xi =>
       loopFromTo(-radius, radius): yi =>
         if xi * xi + yi * yi <= radius * radius then
@@ -147,8 +165,7 @@ extends AutoCloseable:
    */
   def eraseEverything(x: Int, y: Int, radius: Int): Unit =
     checkNotClosed()
-    checkCanPerformInteractiveActions()
-    currentIteration.startEraseAction(x, y, radius)
+    checkCanPerformInteractions()
     loopFromTo(-radius, radius): xi =>
       loopFromTo(-radius, radius): yi =>
         if xi * xi + yi * yi <= radius * radius then
@@ -176,14 +193,13 @@ extends AutoCloseable:
     impl(0)
   
   /**
-   * Returns whether one can perform interactive actions within the current iteration.
-   * @return whether one can perform interactive actions.
+   * Returns whether one can perform interactive actions (interactions) within the current iteration.
+   * @return whether one can perform interactions.
    */
-  def canPerformInteractiveActions: Boolean = currentIteration.canPerformInteractiveActions
+  def canPerformInteractions: Boolean = persistor == null
   
-  private def checkCanPerformInteractiveActions(): Unit =
-    if !currentIteration.canPerformInteractiveActions
-    then throw IllegalStateException("Current iteration disallows interactive actions")
+  private def checkCanPerformInteractions(): Unit =
+    if !canPerformInteractions then throw IllegalStateException("Cannot perform interactions")
   
   private def checkInsideIteration(): Unit =
     if isOutsideIterationProper
@@ -211,7 +227,9 @@ extends AutoCloseable:
         val ind = sq.individual
         if ind != null then
           val g = ind.genome
-          val action = if currentIteration.hasNextCachedAction then currentIteration.nextCachedAction else
+          val action = if persistor != null && persistor.hasNextIndividualAction then
+            persistor.nextIndividualAction
+          else
             callStack.clear()
             loopFromUntil(0, g.size): i =>
               callStack.push(g(i).apply(field, x, y, callStack))
@@ -227,7 +245,7 @@ extends AutoCloseable:
                 if chosenAction == -1 || callStack(i + 1) > callStack(chosenAction + 1) then
                   chosenAction = i
 
-            currentIteration.writeAction(chosenAction)
+            if persistor != null then persistor.writeIndividualAction(chosenAction)
             chosenAction
           end action
           
@@ -377,12 +395,14 @@ extends AutoCloseable:
   
   private inline def withIteration[T](index: Long)(inline body: => T): T =
     checkNotClosed()
-    currentIteration = persistor.connectToIteration(index)
     currentFrameRandom = baseRandom.copyAndJump()
-    isOutsideIterationProper = false
-    try body finally
+    if persistor != null then persistor.startIteration()
+    try
+      isOutsideIterationProper = false
+      body
+    finally
       isOutsideIterationProper = true
-      currentIteration.close()
+      if persistor != null then persistor.finishIteration()
   
   /**
    * Initializes the field randomly as configured.
@@ -414,14 +434,14 @@ extends AutoCloseable:
    * Returns whether simulation can continue.
    * @return whether simulation can continue.
    */
-  def canContinue: Boolean = nAliveBacteria > 0
+  def canContinue: Boolean = nAliveBacteria > 0 && (persistor == null || persistor.isWritable || persistor.hasMoreIterations)
   
   /**
    * Closes this simulation and releases all associated resources.
    */
   override def close(): Unit =
     isClosed = true
-    persistor.close()
+    if persistor != null then persistor.close()
 
 object Simulation:
   /**
@@ -432,15 +452,17 @@ object Simulation:
    * An optional argument is the persistor factory,
    *
    * @param protoConfig the prototype configuration to use.
-   * @param persistorFactory the persistor factory to use.
+   * @param persistorFactory the (optional) persistor factory to use.
    */
-  def apply(protoConfig: Config, persistorFactory: PersistorFactory = PersistorFactory.Dummy): Simulation =
+  def apply(protoConfig: Config, persistorFactory: Option[PersistorFactory]): Simulation =
     val config = protoConfig.withFixedSeed
     val result = new Simulation(
       config = config,
       field = Field(config.fieldWidth, config.fieldHeight),
       baseRandom = RandomGeneratorFactory.of[JumpableGenerator](config.randomFactory).create(config.randomSeed),
-      persistor = persistorFactory.connect(config)
+      persistor = persistorFactory match
+        case None => null
+        case Some(f) => f.connect(config)
     )
 
     println(s"Runtime context created with random factory '${config.randomFactory}' and ${
@@ -450,3 +472,8 @@ object Simulation:
     }")
     
     result
+
+  trait GenealogyListener:
+    def bacteriumBorn(individual: Individual, parent: Individual, iteration: Long): Unit
+    def bacteriumDead(individual: Individual, iteration: Long): Unit
+    

@@ -1,12 +1,12 @@
 package alife
 
-import alife.Action.{Eat, Fork, Move, RotateMinus, RotatePlus}
+import alife.Action.*
 import alife.Mutation.{NoChange, Primitive, Smooth}
 import alife.util.ChecksumSupport
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
 
-import java.io.{ByteArrayOutputStream, StringReader}
+import java.io.StringReader
 import java.util.Properties
 import scala.util.Using
 
@@ -96,7 +96,5 @@ class ConfigParsingTests extends AnyFlatSpec with should.Matchers:
 
   "Config.exportToStream" should "produce identical results on the reference" in:
     val expected = s"${referenceV1ConfigBase}lifeConfigChecksum = $referenceV1ConfigChecksum\n"
-    val stream = ByteArrayOutputStream()
-    referenceV1Config.exportToStream(stream)
-    val found = String(stream.toByteArray)
+    val found = String(referenceV1Config.toByteArray)
     found shouldEqual expected

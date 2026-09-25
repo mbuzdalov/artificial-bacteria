@@ -1,6 +1,6 @@
 package alife
 
-import alife.persistence.PersistorFactory
+import alife.persistence.{PersistorFactory, SingleSourcePersistor}
 import alife.sound.{DefaultSynthesizer, SoundWriterJob}
 import alife.util.{DelayGate, SwingEx}
 import alife.util.Loops.*
@@ -9,6 +9,7 @@ import java.awt.*
 import java.awt.event.{ActionEvent, MouseAdapter, MouseEvent}
 import java.awt.image.BufferedImage
 import java.io.FileReader
+import java.nio.file.Paths
 import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.{Locale, Properties}
@@ -88,7 +89,26 @@ object Main:
     val legendIsOnRight = properties.getProperty("legendIsOnRight").toBoolean
     val autoPause = properties.getProperty("autoPause").toInt
     
-    val persistorFactory = PersistorFactory.Dummy
+    val persistorFactory: Option[PersistorFactory] = properties.getProperty("persistence") match
+      case "None" => None
+      case s"SingleRun(\"$filename\", $mode)" =>
+        val path = Paths.get(filename)
+        val theMode = mode match
+          case "read" => SingleSourcePersistor.Mode.Read
+          case "append" => SingleSourcePersistor.Mode.Append
+          case "validate" => SingleSourcePersistor.Mode.Validate
+          case other => throw IllegalArgumentException(s"Unknown mode for 'persistence = SingleRun': '$other'")
+        Some(PersistorFactory.SingleFileFactory(path, theMode))
+      case s"ChecksumDir(\"$filename\", $mode)" =>
+        val path = Paths.get(filename)
+        val theMode = mode match
+          case "read" => SingleSourcePersistor.Mode.Read
+          case "append" => SingleSourcePersistor.Mode.Append
+          case "validate" => SingleSourcePersistor.Mode.Validate
+          case other => throw IllegalArgumentException(s"Unknown mode for 'persistence = ChecksumDir': '$other'")
+        Some(PersistorFactory.ChecksumBasedFileFactory(path, theMode))
+      case other => throw IllegalArgumentException(s"Unknown value for 'persistence': '$other'")
+    end persistorFactory
     
     val fieldDelayGate = DelayGate()
     val simulationDelayGate = DelayGate()
@@ -284,23 +304,23 @@ object Main:
         // Interactive actions shall check whether they can be performed, because this may change on the fly
         if mouseSmallFood.isSelected
           then clickCommands.addLast: (e, s) =>
-            if e.canPerformInteractiveActions
+            if e.canPerformInteractions
               then e.increaseFood(x, y, smallRadius, s.maxFood * 1.05)
         if mouseLargeFood.isSelected
           then clickCommands.addLast: (e, s) =>
-            if e.canPerformInteractiveActions
+            if e.canPerformInteractions
               then e.increaseFood(x, y, largeRadius, s.maxFood * 1.05)
         if mouseSmallDestroy.isSelected
           then clickCommands.addLast: (e, _) =>
-            if e.canPerformInteractiveActions
+            if e.canPerformInteractions
               then e.eraseEverything(x, y, smallRadius)
         if mouseLargeDestroy.isSelected
           then clickCommands.addLast: (e, _) =>
-            if e.canPerformInteractiveActions
+            if e.canPerformInteractions
               then e.eraseEverything(x, y, largeRadius)
         if mousePutMonster.isSelected
           then clickCommands.addLast: (e, _) =>
-            if e.canPerformInteractiveActions
+            if e.canPerformInteractions
               then e.placeMonster(x, y, compatibleMonster.get)
           
         // Dumping the genome is an exception to that because it does not modify the state
@@ -363,11 +383,11 @@ object Main:
       val stepStats = simulationDelayGate.runOrWait(sim.simulationStep())
 
       // Buttons related to interactive actions are enabled or disabled based on whether interactive actions are enabled
-      mouseSmallFood.setEnabled(sim.canPerformInteractiveActions)
-      mouseLargeFood.setEnabled(sim.canPerformInteractiveActions)
-      mouseSmallDestroy.setEnabled(sim.canPerformInteractiveActions)
-      mouseLargeDestroy.setEnabled(sim.canPerformInteractiveActions)
-      mousePutMonster.setEnabled(sim.canPerformInteractiveActions)
+      mouseSmallFood.setEnabled(sim.canPerformInteractions)
+      mouseLargeFood.setEnabled(sim.canPerformInteractions)
+      mouseSmallDestroy.setEnabled(sim.canPerformInteractions)
+      mouseLargeDestroy.setEnabled(sim.canPerformInteractions)
+      mousePutMonster.setEnabled(sim.canPerformInteractions)
       
       val effectiveFPS = 1.0 / simulationDelayGate.lastLeadInTime
       val visualFPS = 1.0 / fieldDelayGate.lastLeadInTime
