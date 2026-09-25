@@ -15,8 +15,11 @@ case class Config(fieldWidth: Int, fieldHeight: Int,
                   synthesisInit: Double, synthesisFinal: Double, synthesisDecay: Double, synthesisRandomness: Double,
                   idleCost: Double, healthMultiple: Double, healthIncrementMultiple: Double,
                   spotPeriodX: Double, spotSpeedX: Double, spotPeriodY: Double, spotSpeedY: Double, spotDecay: Double,
-                  actionSequence: Seq[Action],
+                  actionSequence: Seq[Action], visionStrength: Int,
                   instructionSequence: Seq[Instruction.RandomFactory], instructionProbabilities: Seq[Double]):
+  require(0 <= visionStrength, "Vision strength should be non-negative")
+  require(visionStrength < Field.numberOfRelativeLocations, s"Vision strength should be less than ${Field.numberOfRelativeLocations}")
+
   /**
    * This is a text representation of the config's contents, which is used both for checksums and for exports.
    */
@@ -113,6 +116,7 @@ object Config:
          |spotSpeedY = ${config.spotSpeedY}
          |spotDecay = ${config.spotDecay}
          |actionSequence = ${config.actionSequence.mkString(", ")}
+         |visionStrength = ${config.visionStrength}
          |instructions = ${config.instructionSequence.mkString(", ")}
          |${config.instructionSequence.indices
               .map(i => s"instructionProbability.${config.instructionSequence(i)} = ${config.instructionProbabilities(i)}")
@@ -202,6 +206,7 @@ object Config:
         spotSpeedY = properties.getProperty("spotSpeedY").toDouble,
         spotDecay = properties.getProperty("spotDecay").toDouble,
         actionSequence = actionSequence,
+        visionStrength = properties.getProperty("visionStrength").toInt,
         instructionSequence = instructionSequence,
         instructionProbabilities = instructionProbabilities,
       )

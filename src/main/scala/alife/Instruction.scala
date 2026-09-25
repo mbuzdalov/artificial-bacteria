@@ -2,8 +2,6 @@ package alife
 
 import alife.util.PseudoStack
 
-import java.util.random.RandomGenerator
-
 /**
  * A trait for all Cartesian Genetic Programming instructions used in this system.
  * Every instruction returns a `Double` value
@@ -43,7 +41,7 @@ sealed trait Instruction:
  */
 object Instruction:
   trait RandomFactory:
-    def generate(position: Int, random: RandomGenerator): Instruction
+    def generate(position: Int, sim: Simulation): Instruction
   
   /**
    * This is the array of all available instruction random factories.
@@ -74,7 +72,7 @@ object Instruction:
     override def mapReferences(mapper: Int => Int): Instruction = this
 
   case object Const extends RandomFactory:
-    override def generate(position: Int, random: RandomGenerator): Instruction = Const(random.nextDouble())
+    override def generate(position: Int, sim: Simulation): Instruction = Const(sim.random.nextDouble())
   
   /**
    * Returns the weight of the current individual.
@@ -84,7 +82,7 @@ object Instruction:
       field.getSquare(x, y).individual.weight
     override def foreachReference(body: Int => Unit): Unit = ()
     override def mapReferences(mapper: Int => Int): Instruction = this
-    override def generate(position: Int, random: RandomGenerator): Instruction = this
+    override def generate(position: Int, sim: Simulation): Instruction = this
   
   /**
    * Returns the health of the current individual.
@@ -94,7 +92,7 @@ object Instruction:
       field.getSquare(x, y).individual.health
     override def foreachReference(body: Int => Unit): Unit = ()
     override def mapReferences(mapper: Int => Int): Instruction = this
-    override def generate(position: Int, random: RandomGenerator): Instruction = this
+    override def generate(position: Int, sim: Simulation): Instruction = this
   
   /**
    * Returns the food amount at a given relative location to the current individual.
@@ -107,8 +105,8 @@ object Instruction:
     override def mapReferences(mapper: Int => Int): Instruction = this
   
   case object FoodAt extends RandomFactory:
-    override def generate(position: Int, random: RandomGenerator): Instruction =
-      FoodAt(random.nextInt(Field.numberOfRelativeLocations))
+    override def generate(position: Int, sim: Simulation): Instruction =
+      FoodAt(sim.random.nextInt(sim.config.visionStrength + 1))
   
   /**
    * Returns the amount of debris at a given relative location to the current individual.
@@ -121,8 +119,8 @@ object Instruction:
     override def mapReferences(mapper: Int => Int): Instruction = this
   
   case object DebrisAt extends RandomFactory:
-    override def generate(position: Int, random: RandomGenerator): Instruction =
-      DebrisAt(random.nextInt(Field.numberOfRelativeLocations))
+    override def generate(position: Int, sim: Simulation): Instruction =
+      DebrisAt(sim.random.nextInt(sim.config.visionStrength + 1))
   
   /**
    * Returns the health of an individual at a given relative location to the current individual, 0 if none.
@@ -136,8 +134,8 @@ object Instruction:
     override def mapReferences(mapper: Int => Int): Instruction = this
   
   case object HealthAt extends RandomFactory:
-    override def generate(position: Int, random: RandomGenerator): Instruction =
-      HealthAt(random.nextInt(Field.numberOfRelativeLocations))
+    override def generate(position: Int, sim: Simulation): Instruction =
+      HealthAt(sim.random.nextInt(sim.config.visionStrength + 1))
   
   /**
    * Returns the sine of the other instruction's value.
@@ -149,8 +147,8 @@ object Instruction:
     override def mapReferences(mapper: Int => Int): Instruction = Sin(mapper(arg))
   
   case object Sin extends RandomFactory:
-    override def generate(position: Int, random: RandomGenerator): Instruction =
-      Sin(random.nextInt(position + 1))
+    override def generate(position: Int, sim: Simulation): Instruction =
+      Sin(sim.random.nextInt(position + 1))
   
   /**
    * Returns the cosine of the other instruction's value.
@@ -162,8 +160,8 @@ object Instruction:
     override def mapReferences(mapper: Int => Int): Instruction = Cos(mapper(arg))
     
   case object Cos extends RandomFactory:
-    override def generate(position: Int, random: RandomGenerator): Instruction =
-      Cos(random.nextInt(position + 1))
+    override def generate(position: Int, sim: Simulation): Instruction =
+      Cos(sim.random.nextInt(position + 1))
   
   /**
    * Returns the exponent of the other instruction's value.
@@ -175,8 +173,8 @@ object Instruction:
     override def mapReferences(mapper: Int => Int): Instruction = Exp(mapper(arg))
   
   case object Exp extends RandomFactory:
-    override def generate(position: Int, random: RandomGenerator): Instruction =
-      Exp(random.nextInt(position + 1))
+    override def generate(position: Int, sim: Simulation): Instruction =
+      Exp(sim.random.nextInt(position + 1))
   
   /**
    * Returns the logarithm of the other instruction's value.
@@ -188,8 +186,8 @@ object Instruction:
     override def mapReferences(mapper: Int => Int): Instruction = Log(mapper(arg))
   
   case object Log extends RandomFactory:
-    override def generate(position: Int, random: RandomGenerator): Instruction =
-      Log(random.nextInt(position + 1))
+    override def generate(position: Int, sim: Simulation): Instruction =
+      Log(sim.random.nextInt(position + 1))
   
   /**
    * Returns the sum of values of two other instructions.
@@ -202,8 +200,8 @@ object Instruction:
     override def mapReferences(mapper: Int => Int): Instruction = Plus(mapper(arg1), mapper(arg2))
 
   case object Plus extends RandomFactory:
-    override def generate(position: Int, random: RandomGenerator): Instruction =
-      Plus(random.nextInt(position + 1), random.nextInt(position + 1))
+    override def generate(position: Int, sim: Simulation): Instruction =
+      Plus(sim.random.nextInt(position + 1), sim.random.nextInt(position + 1))
   
   /**
    * Returns the difference of values of two other instructions.
@@ -216,8 +214,8 @@ object Instruction:
     override def mapReferences(mapper: Int => Int): Instruction = Minus(mapper(arg1), mapper(arg2))
 
   case object Minus extends RandomFactory:
-    override def generate(position: Int, random: RandomGenerator): Instruction =
-      Minus(random.nextInt(position + 1), random.nextInt(position + 1))
+    override def generate(position: Int, sim: Simulation): Instruction =
+      Minus(sim.random.nextInt(position + 1), sim.random.nextInt(position + 1))
     
   /**
    * Returns the product of values of two other instructions.
@@ -230,8 +228,8 @@ object Instruction:
     override def mapReferences(mapper: Int => Int): Instruction = Times(mapper(arg1), mapper(arg2))
   
   case object Times extends RandomFactory:
-    override def generate(position: Int, random: RandomGenerator): Instruction =
-      Times(random.nextInt(position + 1), random.nextInt(position + 1))
+    override def generate(position: Int, sim: Simulation): Instruction =
+      Times(sim.random.nextInt(position + 1), sim.random.nextInt(position + 1))
   
   /**
    * Returns the ratio of values of two other instructions.
@@ -244,8 +242,8 @@ object Instruction:
     override def mapReferences(mapper: Int => Int): Instruction = Divide(mapper(arg1), mapper(arg2))
 
   case object Divide extends RandomFactory:
-    override def generate(position: Int, random: RandomGenerator): Instruction =
-      Divide(random.nextInt(position + 1), random.nextInt(position + 1))
+    override def generate(position: Int, sim: Simulation): Instruction =
+      Divide(sim.random.nextInt(position + 1), sim.random.nextInt(position + 1))
   
   /**
    * Returns the soft comparison of values of two other instructions:
@@ -262,5 +260,5 @@ object Instruction:
     override def mapReferences(mapper: Int => Int): Instruction = Sigmoid(mapper(arg1), mapper(arg2))
   
   case object Sigmoid extends RandomFactory:
-    override def generate(position: Int, random: RandomGenerator): Instruction =
-      Sigmoid(random.nextInt(position + 1), random.nextInt(position + 1))
+    override def generate(position: Int, sim: Simulation): Instruction =
+      Sigmoid(sim.random.nextInt(position + 1), sim.random.nextInt(position + 1))

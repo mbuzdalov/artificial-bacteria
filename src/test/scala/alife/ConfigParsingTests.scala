@@ -40,6 +40,7 @@ class ConfigParsingTests extends AnyFlatSpec with should.Matchers:
     spotSpeedY = 0.0027,
     spotDecay = 0.001,
     actionSequence = IndexedSeq(Fork(Smooth(1.0)), Fork(Primitive(0.1)), Fork(NoChange), Eat, Move, RotatePlus, RotateMinus),
+    visionStrength = 8,
     instructionSequence = IndexedSeq(Const, Cos, DebrisAt, Divide, Exp, FoodAt, HealthAt, Log, Minus, MyHealth, MyWeight, Plus, Sigmoid, Sin, Times),
     instructionProbabilities = IndexedSeq.fill(14)(1.0 / 16) :+ 1.0 / 8,
   )
@@ -72,6 +73,7 @@ class ConfigParsingTests extends AnyFlatSpec with should.Matchers:
       |spotSpeedY = 0.0027
       |spotDecay = 0.001
       |actionSequence = Fork(Smooth(1.0)), Fork(Primitive(0.1)), Fork(NoChange), Eat, Move, RotatePlus, RotateMinus
+      |visionStrength = 8
       |instructions = Const, Cos, DebrisAt, Divide, Exp, FoodAt, HealthAt, Log, Minus, MyHealth, MyWeight, Plus, Sigmoid, Sin, Times
       |instructionProbability.Const = 0.0625
       |instructionProbability.Cos = 0.0625

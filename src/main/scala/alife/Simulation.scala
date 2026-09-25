@@ -126,7 +126,7 @@ extends AutoCloseable:
    * @return the generated instruction.
    */
   def randomInstruction(position: Int): Instruction =
-    config.randomInstructionFactory(random).generate(position, random)
+    config.randomInstructionFactory(random).generate(position, this)
   
   /**
    * When called, puts a monster with the specified genome to the specified cell of the field.

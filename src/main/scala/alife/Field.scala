@@ -62,8 +62,8 @@ end Field
 object Field:
   private val directionX = Array(1, 0, -1, 0)
   private val directionY = Array(0, 1, 0, -1)
-  private val relativeLocationsFW = Array(0, 1,  0, 0,  1, 1,  0, 0, 2)
-  private val relativeLocationsLF = Array(0, 0, -1, 1, -1, 1, -2, 2, 0)
+  private val relativeLocationsFW = Array(0, 1,  0, 0,  1, 1, 2,  0, 0)
+  private val relativeLocationsLF = Array(0, 0, -1, 1, -1, 1, 0, -2, 2)
 
   val relativeLocationForward = 1
   val numberOfRelativeLocations: Int = relativeLocationsFW.length
