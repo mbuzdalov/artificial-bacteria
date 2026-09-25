@@ -24,124 +24,209 @@ sealed trait Instruction:
    * @return the computed value.
    */
   def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double
+  
+  /**
+   * Creates a new instruction of the same type with each reference argument replaced using the given function.
+   * @param mapper the function that converts reference arguments.
+   * @return the new converted instruction.
+   */
+  def mapReferences(mapper: Int => Int): Instruction
+  
+  /**
+   * Applies the given function to each of the reference arguments.
+   * @param body the function that is applied to reference arguments.
+   */
+  def foreachReference(body: Int => Unit): Unit
 
 /**
  * All the available instructions.
  */
 object Instruction:
+  trait RandomFactory:
+    def generate(position: Int, random: RandomGenerator): Instruction
+
   /**
    * Always returns a constant value.
    * @param value the constant value.
    */
-  case class Const(value: Double) extends Instruction:
+  final class Const(value: Double) extends Instruction:
     override def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = value
+    override def foreachReference(body: Int => Unit): Unit = ()
+    override def mapReferences(mapper: Int => Int): Instruction = this
+
+  object Const extends RandomFactory:
+    override def generate(position: Int, random: RandomGenerator): Instruction = Const(random.nextDouble())
   
   /**
    * Returns the weight of the current individual.
    */
-  case object MyWeight extends Instruction:
+  object MyWeight extends Instruction, RandomFactory:
     override def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
       field.getSquare(x, y).individual.weight
+    override def foreachReference(body: Int => Unit): Unit = ()
+    override def mapReferences(mapper: Int => Int): Instruction = this
+    override def generate(position: Int, random: RandomGenerator): Instruction = this
   
   /**
    * Returns the health of the current individual.
    */
-  case object MyHealth extends Instruction:
+  object MyHealth extends Instruction, RandomFactory:
     override def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
       field.getSquare(x, y).individual.health
+    override def foreachReference(body: Int => Unit): Unit = ()
+    override def mapReferences(mapper: Int => Int): Instruction = this
+    override def generate(position: Int, random: RandomGenerator): Instruction = this
   
   /**
    * Returns the food amount at a given relative location to the current individual.
    * @param relativeLocation the relative location.
    */
-  case class FoodAt(relativeLocation: Int) extends Instruction:
+  class FoodAt(relativeLocation: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
       field.getRelativeSquare(x, y, relativeLocation).food
+    override def foreachReference(body: Int => Unit): Unit = ()
+    override def mapReferences(mapper: Int => Int): Instruction = this
+  
+  object FoodAt extends RandomFactory:
+    override def generate(position: Int, random: RandomGenerator): Instruction =
+      FoodAt(random.nextInt(Field.numberOfRelativeLocations))
   
   /**
    * Returns the amount of debris at a given relative location to the current individual.
    * @param relativeLocation the relative location.
    */
-  case class DebrisAt(relativeLocation: Int) extends Instruction:
+  class DebrisAt(relativeLocation: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
       field.getRelativeSquare(x, y, relativeLocation).debris
+    override def foreachReference(body: Int => Unit): Unit = ()
+    override def mapReferences(mapper: Int => Int): Instruction = this
+  
+  object DebrisAt extends RandomFactory:
+    override def generate(position: Int, random: RandomGenerator): Instruction =
+      DebrisAt(random.nextInt(Field.numberOfRelativeLocations))
   
   /**
    * Returns the health of an individual at a given relative location to the current individual, 0 if none.
    * @param relativeLocation the relative location.
    */
-  case class HealthAt(relativeLocation: Int) extends Instruction:
+  class HealthAt(relativeLocation: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
       val other = field.getRelativeSquare(x, y, relativeLocation).individual
       if other != null then other.health else 0.0
+    override def foreachReference(body: Int => Unit): Unit = ()
+    override def mapReferences(mapper: Int => Int): Instruction = this
+  
+  object HealthAt extends RandomFactory:
+    override def generate(position: Int, random: RandomGenerator): Instruction =
+      HealthAt(random.nextInt(Field.numberOfRelativeLocations))
   
   /**
    * Returns the sine of the other instruction's value.
    * @param arg the index of the other instruction acting as an argument.
    */
-  case class Sin(arg: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
-      math.sin(data(arg))
+  class Sin(arg: Int) extends Instruction:
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = math.sin(data(arg))
+    override def foreachReference(body: Int => Unit): Unit = body(arg)
+    override def mapReferences(mapper: Int => Int): Instruction = Sin(mapper(arg))
+  
+  object Sin extends RandomFactory:
+    override def generate(position: Int, random: RandomGenerator): Instruction =
+      Sin(random.nextInt(position + 1))
   
   /**
    * Returns the cosine of the other instruction's value.
    * @param arg the index of the other instruction acting as an argument.
    */
-  case class Cos(arg: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
-      math.cos(data(arg))
+  class Cos(arg: Int) extends Instruction:
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = math.cos(data(arg))
+    override def foreachReference(body: Int => Unit): Unit = body(arg)
+    override def mapReferences(mapper: Int => Int): Instruction = Cos(mapper(arg))
+    
+  object Cos extends RandomFactory:
+    override def generate(position: Int, random: RandomGenerator): Instruction =
+      Cos(random.nextInt(position + 1))
   
   /**
    * Returns the exponent of the other instruction's value.
    * @param arg the index of the other instruction acting as an argument.
    */
-  case class Exp(arg: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
-      math.exp(data(arg))
+  class Exp(arg: Int) extends Instruction:
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = math.exp(data(arg))
+    override def foreachReference(body: Int => Unit): Unit = body(arg)
+    override def mapReferences(mapper: Int => Int): Instruction = Exp(mapper(arg))
+  
+  object Exp extends RandomFactory:
+    override def generate(position: Int, random: RandomGenerator): Instruction =
+      Exp(random.nextInt(position + 1))
   
   /**
    * Returns the logarithm of the other instruction's value.
    * @param arg the index of the other instruction acting as an argument.
    */
-  case class Log(arg: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
-      math.log(data(arg))
+  class Log(arg: Int) extends Instruction:
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = math.log(data(arg))
+    override def foreachReference(body: Int => Unit): Unit = body(arg)
+    override def mapReferences(mapper: Int => Int): Instruction = Log(mapper(arg))
+  
+  object Log extends RandomFactory:
+    override def generate(position: Int, random: RandomGenerator): Instruction =
+      Log(random.nextInt(position + 1))
   
   /**
    * Returns the sum of values of two other instructions.
    * @param arg1 the index of the other instruction serving as the first argument.
    * @param arg2 the index of the other instruction serving as the second argument.
    */
-  case class Plus(arg1: Int, arg2: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
-      data(arg1) + data(arg2)
+  class Plus(arg1: Int, arg2: Int) extends Instruction:
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = data(arg1) + data(arg2)
+    override def foreachReference(body: Int => Unit): Unit = { body(arg1); body(arg2) }
+    override def mapReferences(mapper: Int => Int): Instruction = Plus(mapper(arg1), mapper(arg2))
+
+  object Plus extends RandomFactory:
+    override def generate(position: Int, random: RandomGenerator): Instruction =
+      Plus(random.nextInt(position + 1), random.nextInt(position + 1))
   
   /**
    * Returns the difference of values of two other instructions.
    * @param arg1 the index of the other instruction serving as the first argument.
    * @param arg2 the index of the other instruction serving as the second argument.
    */
-  case class Minus(arg1: Int, arg2: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
-      data(arg1) - data(arg2)
-  
+  class Minus(arg1: Int, arg2: Int) extends Instruction:
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = data(arg1) - data(arg2)
+    override def foreachReference(body: Int => Unit): Unit = { body(arg1); body(arg2) }
+    override def mapReferences(mapper: Int => Int): Instruction = Minus(mapper(arg1), mapper(arg2))
+
+  object Minus extends RandomFactory:
+    override def generate(position: Int, random: RandomGenerator): Instruction =
+      Minus(random.nextInt(position + 1), random.nextInt(position + 1))
+    
   /**
    * Returns the product of values of two other instructions.
    * @param arg1 the index of the other instruction serving as the first argument.
    * @param arg2 the index of the other instruction serving as the second argument.
    */
-  case class Times(arg1: Int, arg2: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
-      data(arg1) * data(arg2)
+  class Times(arg1: Int, arg2: Int) extends Instruction:
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = data(arg1) * data(arg2)
+    override def foreachReference(body: Int => Unit): Unit = { body(arg1); body(arg2) }
+    override def mapReferences(mapper: Int => Int): Instruction = Times(mapper(arg1), mapper(arg2))
+  
+  object Times extends RandomFactory:
+    override def generate(position: Int, random: RandomGenerator): Instruction =
+      Times(random.nextInt(position + 1), random.nextInt(position + 1))
   
   /**
    * Returns the ratio of values of two other instructions.
    * @param arg1 the index of the other instruction serving as the first argument.
    * @param arg2 the index of the other instruction serving as the second argument.
    */
-  case class Divide(arg1: Int, arg2: Int) extends Instruction:
-    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
-      data(arg1) / data(arg2)
+  class Divide(arg1: Int, arg2: Int) extends Instruction:
+    override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double = data(arg1) / data(arg2)
+    override def foreachReference(body: Int => Unit): Unit = { body(arg1); body(arg2) }
+    override def mapReferences(mapper: Int => Int): Instruction = Divide(mapper(arg1), mapper(arg2))
+
+  object Divide extends RandomFactory:
+    override def generate(position: Int, random: RandomGenerator): Instruction =
+      Divide(random.nextInt(position + 1), random.nextInt(position + 1))
   
   /**
    * Returns the soft comparison of values of two other instructions:
@@ -151,9 +236,15 @@ object Instruction:
    * @param arg1 the index of the other instruction serving as the first argument.
    * @param arg2 the index of the other instruction serving as the second argument.
    */
-  case class Sigmoid(arg1: Int, arg2: Int) extends Instruction:
+  class Sigmoid(arg1: Int, arg2: Int) extends Instruction:
     override final def apply(field: Field, x: Int, y: Int, data: PseudoStack): Double =
       2 / (1 + math.exp(data(arg1) - data(arg2))) - 1
+    override def foreachReference(body: Int => Unit): Unit = { body(arg1); body(arg2) }
+    override def mapReferences(mapper: Int => Int): Instruction = Sigmoid(mapper(arg1), mapper(arg2))
+  
+  object Sigmoid extends RandomFactory:
+    override def generate(position: Int, random: RandomGenerator): Instruction =
+      Sigmoid(random.nextInt(position + 1), random.nextInt(position + 1))
   
   /**
    * Generates a new random instruction for the given position in the individual.
@@ -183,49 +274,3 @@ object Instruction:
       case 13 => Divide(nextPos(), nextPos())
       case 14 => Sigmoid(nextPos(), nextPos())
       case _ => throw new AssertionError()
-  
-  /**
-   * Maps all argument indices in the supplied instruction using the provided mapping function.
-   * @param mapper the mapping function to change argument indices.
-   * @param instruction the instruction to modify.
-   * @return the modified instruction.
-   */
-  def mapArguments(mapper: Int => Int)(instruction: Instruction): Instruction = instruction match
-    case i: Const => i
-    case MyWeight => MyWeight
-    case MyHealth => MyHealth
-    case i: FoodAt => i
-    case i: DebrisAt => i
-    case i: HealthAt => i
-    case Sin(a) => Sin(mapper(a))
-    case Cos(a) => Cos(mapper(a))
-    case Exp(a) => Exp(mapper(a))
-    case Log(a) => Log(mapper(a))
-    case Plus(a1, a2) => Plus(mapper(a1), mapper(a2))
-    case Minus(a1, a2) => Minus(mapper(a1), mapper(a2))
-    case Times(a1, a2) => Times(mapper(a1), mapper(a2))
-    case Divide(a1, a2) => Divide(mapper(a1), mapper(a2))
-    case Sigmoid(a1, a2) => Sigmoid(mapper(a1), mapper(a2))
-  
-  /**
-   * Calls a given function for each argument index of a supplied instruction.
-   * @param instruction the instruction to deal with.
-   * @param body the function to call on each instruction's argument index.
-   */
-  inline def forEachArgument(instruction: Instruction)(inline body: Int => Any): Unit = instruction match
-    case i: Const => 
-    case MyWeight => 
-    case MyHealth => 
-    case i: FoodAt =>
-    case i: DebrisAt =>
-    case i: HealthAt =>
-    case Sin(a) => body(a)
-    case Cos(a) => body(a)
-    case Exp(a) => body(a)
-    case Log(a) => body(a)
-    case Plus(a1, a2) => body(a1); body(a2)
-    case Minus(a1, a2) => body(a1); body(a2)
-    case Times(a1, a2) => body(a1); body(a2)
-    case Divide(a1, a2) => body(a1); body(a2)
-    case Sigmoid(a1, a2) => body(a1); body(a2)
- 

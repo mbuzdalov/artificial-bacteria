@@ -1,7 +1,6 @@
 package alife
 
 import alife.util.Loops.*
-import alife.Instruction.*
 
 /**
  * This class encapsulates the genome (a sequence of instructions), a label used in the visual highlighting code,
@@ -111,7 +110,7 @@ class Individual(val id: Long, val genome: IArray[Instruction], private var myLa
       loopFromUntil(0, genome.length): ii =>
         val idx = genome.length - 1 - ii
         if ii < config.actions.length then used(idx) = true
-        Instruction.forEachArgument(genome(idx)): a =>
+        genome(idx).foreachReference: a =>
           if a > 0 && idx - a >= 0 then used(idx - a) = true
       val result = countFromUntil(0, used.length)(i => used(i))
       myNecessaryInstructions = result
