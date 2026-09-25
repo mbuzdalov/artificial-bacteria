@@ -94,7 +94,7 @@ class ConfigParsingTests extends AnyFlatSpec with should.Matchers:
     an[IllegalArgumentException] shouldBe thrownBy:
       Config.parse(props)
 
-  "Config.exportToStream" should "produce identical results on the reference" in:
+  "Config.toByteArray" should "produce identical results on the reference" in:
     val expected = s"${referenceV1ConfigBase}lifeConfigChecksum = $referenceV1ConfigChecksum\n"
     val found = String(referenceV1Config.toByteArray)
     found shouldEqual expected
