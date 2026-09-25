@@ -480,6 +480,16 @@ object Simulation:
     }")
     
     result
+  end apply
+
+  def apply(persistor: Persistor): Simulation =
+    val config = persistor.config
+    new Simulation(
+      config = config,
+      field = Field(config.fieldWidth, config.fieldHeight),
+      baseRandom = RandomGeneratorFactory.of[JumpableGenerator](config.randomFactory).create(config.randomSeed), 
+      persistor = persistor
+    )
 
   trait GenealogyListener:
     def bacteriumBorn(individual: Individual, parent: Individual, iteration: Long): Unit

@@ -8,9 +8,7 @@ import java.nio.ByteBuffer
 import java.nio.file.{Files, Path, StandardOpenOption}
 import java.util.Properties
 
-class SingleSourcePersistor private (val config: Config, access: Accessor, mode: Mode) extends Persistor:
-  require(config.actionSequence.size < 255, "Too many actions to fit one byte")
-  
+class SingleSourcePersistor private (configIfKnown: Option[Config], access: Accessor, mode: Mode) extends Persistor:
   if !access.hasMoreBytes then mode match
     case Mode.Read => throw IllegalArgumentException("Header missing when mode = Read")
     case Mode.Validate => throw IllegalArgumentException("Header missing when mode = Validate")
@@ -19,14 +17,17 @@ class SingleSourcePersistor private (val config: Config, access: Accessor, mode:
     val header = access.readLong()
     if header != magicBytes then throw IllegalArgumentException("Header magic bytes are incorrect")
   end if
-  
-  if !access.hasMoreBytes then mode match
+ 
+  val config: Config = if !access.hasMoreBytes then mode match
     case Mode.Read => throw IllegalArgumentException("Config missing when mode = Read")
     case Mode.Validate => throw IllegalArgumentException("Config missing when mode = Validate")
-    case Mode.Append =>
-      val bytes = config.toByteArray
-      access.writeInt(bytes.length)
-      access.writeBytes(bytes, 0, bytes.length)
+    case Mode.Append => configIfKnown match
+      case None => throw IllegalArgumentException("Mode = Append, but config is unknown and resource is empty")
+      case Some(cfg) =>
+        val bytes = cfg.toByteArray
+        access.writeInt(bytes.length)
+        access.writeBytes(bytes, 0, bytes.length)
+        cfg
   else
     val configBytesSize = access.readInt()
     val configBytes = Array.ofDim[Byte](configBytesSize)
@@ -34,8 +35,13 @@ class SingleSourcePersistor private (val config: Config, access: Accessor, mode:
     val properties = Properties()
     properties.load(ByteArrayInputStream(configBytes))
     val inStorageConfig = Config.parse(properties, forceCheckIntegrity = true)
-    if inStorageConfig != config then throw IllegalArgumentException("The in-storage config does not match the specified config")
-  end if
+    configIfKnown match
+      case None =>
+      case Some(cfg) => if inStorageConfig != cfg then throw IllegalArgumentException("The in-storage config does not match the specified config")
+    inStorageConfig  
+  end config
+  
+  require(config.actionSequence.size < 255, "Too many actions to fit one byte")
   
   private var outIterationBuffer, currentIteration, nextIteration: Array[Byte] = Array.ofDim[Byte](16)
   private var outIterationIndex: Int = 0
@@ -153,7 +159,7 @@ object SingleSourcePersistor:
   enum Mode:
     case Read, Append, Validate
 
-  def forByteBuffer(config: Config, buffer: ByteBuffer, forValidation: Boolean): Persistor =
+  private def forByteBuffer(buffer: ByteBuffer, forValidation: Boolean): Persistor =
     val accessor = new Accessor:
       override def hasMoreBytes: Boolean = buffer.position() < buffer.capacity()
       override def readInt(): Int = buffer.getInt
@@ -166,12 +172,12 @@ object SingleSourcePersistor:
         throw UnsupportedOperationException("This accessor is read-only")
       override def close(): Unit = ()
     end accessor
-    SingleSourcePersistor(config, accessor, if forValidation then Mode.Validate else Mode.Read)
+    SingleSourcePersistor(None, accessor, if forValidation then Mode.Validate else Mode.Read)
   
-  def forByteArray(config: Config, array: Array[Byte], forValidation: Boolean): Persistor =
-    forByteBuffer(config, ByteBuffer.wrap(array), forValidation)
+  def forByteArray(array: Array[Byte], forValidation: Boolean): Persistor =
+    forByteBuffer(ByteBuffer.wrap(array), forValidation)
 
-  def forFile(config: Config, file: Path, mode: Mode): Persistor =
+  private def forFileImpl(configIfKnown: Option[Config], file: Path, mode: Mode): Persistor =
     val optionSet = java.util.HashSet[StandardOpenOption]()
     optionSet.add(StandardOpenOption.READ)
     if mode == Mode.Append then
@@ -181,7 +187,9 @@ object SingleSourcePersistor:
     val accessor = new Accessor:
       private val buffer4 = ByteBuffer.allocate(4)
       private val buffer8 = ByteBuffer.allocate(8)
+      
       override def hasMoreBytes: Boolean = channel.position() < channel.size()
+      
       override def readInt(): Int =
         buffer4.clear()
         val nBytes = channel.read(buffer4)
@@ -212,4 +220,10 @@ object SingleSourcePersistor:
       
       override def close(): Unit = channel.close()
     end accessor
-    SingleSourcePersistor(config, accessor, mode)
+    SingleSourcePersistor(configIfKnown, accessor, mode)
+  
+  def forFile(config: Config, file: Path, mode: Mode): Persistor =
+    forFileImpl(Some(config), file, mode)
+
+  def forFile(file: Path, forValidation: Boolean): Persistor =
+    forFileImpl(None, file, if forValidation then Mode.Validate else Mode.Read)
